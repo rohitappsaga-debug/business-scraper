@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#5048e5",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#121121",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen">
+<div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+<div class="layout-container flex h-full grow flex-col">
+<!-- Top Navigation Bar -->
+<main class="flex flex-1 justify-center py-8 px-6 lg:px-20">
+<div class="layout-content-container flex flex-col w-full max-w-[1280px] gap-6">
+<!-- Page Title & Actions -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+<div class="flex flex-col gap-1">
+<h1 class="text-slate-900 dark:text-white text-3xl font-black leading-tight tracking-[-0.033em]">Scraping Results</h1>
+<p class="text-slate-500 dark:text-slate-400 text-base font-normal">Manage and export your extracted business leads.</p>
+</div>
+<div class="flex flex-wrap items-center gap-3">
+<button class="flex items-center justify-center rounded-lg h-10 px-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">
+<span class="material-symbols-outlined text-sm mr-2">description</span>
+                                Export CSV
+                            </button>
+<button class="flex items-center justify-center rounded-lg h-10 px-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">
+<span class="material-symbols-outlined text-sm mr-2">table_chart</span>
+                                Export Excel
+                            </button>
+<button class="flex items-center justify-center rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold hover:opacity-90 transition-all shadow-sm">
+<span class="material-symbols-outlined text-sm mr-2">add</span>
+                                Start New Search
+                            </button>
+</div>
+</div>
+<!-- Summary Bar Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+<div class="flex flex-col gap-1 rounded-xl p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+<p class="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">Keyword</p>
+<p class="text-slate-900 dark:text-white text-xl font-bold">Dentists</p>
+</div>
+<div class="flex flex-col gap-1 rounded-xl p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+<p class="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">Location</p>
+<p class="text-slate-900 dark:text-white text-xl font-bold">New York</p>
+</div>
+<div class="flex flex-col gap-1 rounded-xl p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+<p class="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">Results Found</p>
+<p class="text-slate-900 dark:text-white text-xl font-bold">100</p>
+</div>
+<div class="flex flex-col gap-1 rounded-xl p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+<p class="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">Status</p>
+<div class="flex items-center gap-2">
+<span class="text-emerald-600 dark:text-emerald-400 text-xl font-bold">Completed</span>
+<span class="flex size-5 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400">
+<span class="material-symbols-outlined text-xs font-bold">check</span>
+</span>
+</div>
+</div>
+</div>
+<!-- Results Table Section -->
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col">
+<!-- Table Filter -->
+<div class="p-4 border-b border-slate-100 dark:border-slate-800">
+<label class="flex flex-col min-w-40 h-10 w-full md:max-w-md">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+<div class="text-slate-500 dark:text-slate-400 flex items-center justify-center pl-3">
+<span class="material-symbols-outlined text-lg">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 border-none bg-transparent focus:outline-0 focus:ring-0 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 px-3 text-sm font-normal" placeholder="Filter results by name, email or category..."/>
+</div>
+</label>
+</div>
+<!-- Table Container -->
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
+<th class="px-4 py-3 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider">Business Name</th>
+<th class="px-4 py-3 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider">Category</th>
+<th class="px-4 py-3 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider">Address</th>
+<th class="px-4 py-3 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider">Phone</th>
+<th class="px-4 py-3 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider">Email</th>
+<th class="px-4 py-3 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider">Website</th>
+<th class="px-4 py-3 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider text-center">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+<!-- Row 1 -->
+<tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-4 py-4 text-slate-900 dark:text-white font-medium text-sm">Central Park Dental</td>
+<td class="px-4 py-4 text-slate-600 dark:text-slate-400 text-sm">Cosmetic Dentistry</td>
+<td class="px-4 py-4 text-slate-600 dark:text-slate-400 text-sm">30 Central Park S, NY 10019</td>
+<td class="px-4 py-4 text-slate-600 dark:text-slate-400 text-sm">(212) 759-2993</td>
+<td class="px-4 py-4 text-primary text-sm font-medium underline decoration-primary/30">info@cpdental.com</td>
+<td class="px-4 py-4 text-primary text-sm font-medium underline decoration-primary/30">cpdental.com</td>
+<td class="px-4 py-4">
+<div class="flex items-center justify-center gap-2"><button class="flex items-center justify-center gap-2 px-4 py-1.5 rounded-lg bg-primary text-white text-sm font-semibold hover:opacity-90 transition-all shadow-sm" title="View Details"><span class="material-symbols-outlined text-[18px]">visibility</span><span>View</span></button></div>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-4 py-4 text-slate-900 dark:text-white font-medium text-sm">Madison Ave Dental</td>
+<td class="px-4 py-4 text-slate-600 dark:text-slate-400 text-sm">General Dentist</td>
+<td class="px-4 py-4 text-slate-600 dark:text-slate-400 text-sm">501 Madison Ave, NY 10022</td>
+<td class="px-4 py-4 text-slate-600 dark:text-slate-400 text-sm">(212) 355-2540</td>
+<td class="px-4 py-4 text-slate-400 dark:text-slate-600 text-sm italic">Not Found</td>
+<td class="px-4 py-4 text-primary text-sm font-medium underline decoration-primary/30">madisondental.ny</td>
+<td class="px-4 py-4">
+<div class="flex items-center justify-center gap-2"><button class="flex items-center justify-center gap-2 px-4 py-1.5 rounded-lg bg-primary text-white text-sm font-semibold hover:opacity-90 transition-all shadow-sm" title="View Details"><span class="material-symbols-outlined text-[18px]">visibility</span><span>View</span></button></div>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-4 py-4 text-slate-900 dark:text-white font-medium text-sm">Empire Dental Group</td>
+<td class="px-4 py-4 text-slate-600 dark:text-slate-400 text-sm">Pediatric Dentist</td>
+<td class="px-4 py-4 text-slate-600 dark:text-slate-400 text-sm">350 5th Ave, NY 10118</td>
+<td class="px-4 py-4 text-slate-600 dark:text-slate-400 text-sm">(212) 643-2044</td>
+<td class="px-4 py-4 text-primary text-sm font-medium underline decoration-primary/30">contact@empiredental.com</td>
+<td class="px-4 py-4 text-primary text-sm font-medium underline decoration-primary/30">empiredental.com</td>
+<td class="px-4 py-4">
+<div class="flex items-center justify-center gap-2"><button class="flex items-center justify-center gap-2 px-4 py-1.5 rounded-lg bg-primary text-white text-sm font-semibold hover:opacity-90 transition-all shadow-sm" title="View Details"><span class="material-symbols-outlined text-[18px]">visibility</span><span>View</span></button></div>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-4 py-4 text-slate-900 dark:text-white font-medium text-sm">Gramercy Park Dentistry</td>
+<td class="px-4 py-4 text-slate-600 dark:text-slate-400 text-sm">General Dentistry</td>
+<td class="px-4 py-4 text-slate-600 dark:text-slate-400 text-sm">225 E 19th St, NY 10003</td>
+<td class="px-4 py-4 text-slate-600 dark:text-slate-400 text-sm">(212) 674-6724</td>
+<td class="px-4 py-4 text-primary text-sm font-medium underline decoration-primary/30">hello@gramercydentist.com</td>
+<td class="px-4 py-4 text-primary text-sm font-medium underline decoration-primary/30">gramercydentist.com</td>
+<td class="px-4 py-4">
+<div class="flex items-center justify-center gap-2"><button class="flex items-center justify-center gap-2 px-4 py-1.5 rounded-lg bg-primary text-white text-sm font-semibold hover:opacity-90 transition-all shadow-sm" title="View Details"><span class="material-symbols-outlined text-[18px]">visibility</span><span>View</span></button></div>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-4 py-4 text-slate-900 dark:text-white font-medium text-sm">Broadway Dental Arts</td>
+<td class="px-4 py-4 text-slate-600 dark:text-slate-400 text-sm">Oral Surgery</td>
+<td class="px-4 py-4 text-slate-600 dark:text-slate-400 text-sm">1776 Broadway, NY 10019</td>
+<td class="px-4 py-4 text-slate-600 dark:text-slate-400 text-sm">(212) 246-1300</td>
+<td class="px-4 py-4 text-primary text-sm font-medium underline decoration-primary/30">support@broadwaydental.com</td>
+<td class="px-4 py-4 text-primary text-sm font-medium underline decoration-primary/30">broadwaydentalny.com</td>
+<td class="px-4 py-4">
+<div class="flex items-center justify-center gap-2"><button class="flex items-center justify-center gap-2 px-4 py-1.5 rounded-lg bg-primary text-white text-sm font-semibold hover:opacity-90 transition-all shadow-sm" title="View Details"><span class="material-symbols-outlined text-[18px]">visibility</span><span>View</span></button></div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination -->
+<div class="flex items-center justify-between p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
+<p class="text-slate-500 dark:text-slate-400 text-sm">Showing 1 to 5 of 100 leads</p>
+<div class="flex gap-1">
+<button class="size-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined text-sm">chevron_left</span>
+</button>
+<button class="size-8 flex items-center justify-center rounded-lg border border-primary bg-primary text-white text-sm font-bold">
+                                    1
+                                </button>
+<button class="size-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                    2
+                                </button>
+<button class="size-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                    3
+                                </button>
+<span class="px-1 py-1 text-slate-400 dark:text-slate-600">...</span>
+<button class="size-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                    20
+                                </button>
+<button class="size-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Additional Context Section (Optional) -->
+</div>
+</main>
+<!-- Footer -->
+<footer class="mt-auto py-8 px-20 border-t border-slate-200 dark:border-slate-800 text-center text-slate-400 dark:text-slate-600 text-xs">
+                © 2024 LeadScraper Pro. All rights reserved. | <a class="hover:text-primary transition-colors" href="#">Privacy Policy</a> | <a class="hover:text-primary transition-colors" href="#">Terms of Service</a>
+</footer>
+</div>
+</div>
+</body></html>
