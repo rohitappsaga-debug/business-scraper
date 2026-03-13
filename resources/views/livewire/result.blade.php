@@ -43,9 +43,30 @@
         <div class="flex flex-col gap-1 rounded-xl p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
             <p class="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">Status</p>
             <div class="flex items-center gap-2">
-                <span class="text-emerald-600 dark:text-emerald-400 text-xl font-bold">Completed</span>
-                <span class="flex size-5 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400">
-                    <span class="material-symbols-outlined text-xs font-bold">check</span>
+                @php
+                    $status = $scrapingJob['status'] ?? 'pending';
+                    $statusColor = match($status) {
+                        'completed' => 'text-emerald-600 dark:text-emerald-400',
+                        'failed' => 'text-red-600 dark:text-red-400',
+                        'running' => 'text-blue-600 dark:text-blue-400',
+                        default => 'text-slate-600 dark:text-slate-400',
+                    };
+                    $icon = match($status) {
+                        'completed' => 'check',
+                        'failed' => 'close',
+                        'running' => 'sync',
+                        default => 'more_horiz',
+                    };
+                    $iconBg = match($status) {
+                        'completed' => 'bg-emerald-100 dark:bg-emerald-900/30',
+                        'failed' => 'bg-red-100 dark:bg-red-900/30',
+                        'running' => 'bg-blue-100 dark:bg-blue-900/30',
+                        default => 'bg-slate-100 dark:bg-slate-900/30',
+                    };
+                @endphp
+                <span class="{{ $statusColor }} text-xl font-bold">{{ ucfirst($status) }}</span>
+                <span class="flex size-5 items-center justify-center rounded-full {{ $iconBg }} {{ $statusColor }}">
+                    <span class="material-symbols-outlined text-xs font-bold {{ $status === 'running' ? 'animate-spin' : '' }}">{{ $icon }}</span>
                 </span>
             </div>
         </div>
