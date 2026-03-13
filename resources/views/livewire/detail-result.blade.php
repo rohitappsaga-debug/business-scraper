@@ -75,22 +75,22 @@
                                     <p class="text-slate-900 dark:text-white font-semibold">{{ $business['postal_country'] }}</p>
                                 </div>
                             </div>
-                            {{-- Map Preview --}}
                             <div class="mt-8 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 aspect-[21/9] relative bg-slate-100 dark:bg-slate-800">
-                                <iframe
-                                    width="100%"
-                                    height="100%"
-                                    style="border:0"
-                                    loading="lazy"
-                                    allowfullscreen
-                                    referrerpolicy="no-referrer-when-downgrade"
-                                    src="https://www.google.com/maps/embed/v1/place?key=&q={{ urlencode($business['address']) }}&zoom=15">
-                                </iframe>
-                                {{-- Fallback / Overlay if key is missing (though Google often allows limited keyless embeds for 'place') --}}
-                                @if(empty(config('services.google.maps_api_key')))
-                                    {{-- Using the search embed which often works better keyless or as a public embed --}}
+                                @if(!empty(config('services.google.maps_api_key')))
+                                    {{-- Using Google Maps Embed API with key --}}
                                     <iframe
-                                        class="absolute inset-0 w-full h-full"
+                                        width="100%"
+                                        height="100%"
+                                        style="border:0"
+                                        loading="lazy"
+                                        allowfullscreen
+                                        referrerpolicy="no-referrer-when-downgrade"
+                                        src="https://www.google.com/maps/embed/v1/place?key={{ config('services.google.maps_api_key') }}&q={{ urlencode($business['address']) }}&zoom=15">
+                                    </iframe>
+                                @else
+                                    {{-- Using the search embed which works without a key --}}
+                                    <iframe
+                                        class="w-full h-full"
                                         frameborder="0" style="border:0"
                                         src="https://www.google.com/maps?q={{ urlencode($business['address']) }}&output=embed"
                                         allowfullscreen>
