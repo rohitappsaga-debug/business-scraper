@@ -32,7 +32,7 @@ class DetailResult extends Component
             'id' => $model->id,
             'name' => $model->name,
             'category' => $model->category ?? 'General Business',
-            'description' => $model->description ?? 'No description available.',
+            'description' => $model->getGeneratedDescription(),
             'address' => trim(implode(', ', array_filter([
                 $model->address,
                 $model->city,

@@ -30,6 +30,7 @@ class Business extends Model
         'longitude',
         'source',
         'dedup_hash',
+        'description',
     ];
 
     public function casts(): array
@@ -58,5 +59,21 @@ class Business extends Model
     public static function generateDedupHash(string $name, string $address): string
     {
         return md5(strtolower(trim($name)).'|'.strtolower(trim($address)));
+    }
+
+    /**
+     * Get the description or a generated one.
+     */
+    public function getGeneratedDescription(): string
+    {
+        if ($this->description) {
+            return $this->description;
+        }
+
+        $category = strtolower($this->category ?? 'business');
+        $locationParts = array_filter([$this->city, $this->state]);
+        $location = ! empty($locationParts) ? ' in '.implode(', ', $locationParts) : '';
+
+        return "{$this->name} is a premier {$category}{$location}. They are dedicated to providing excellent service and professional expertise to their valued clients.";
     }
 }
