@@ -163,6 +163,9 @@ class BusinessParser
 
         // Post-process Google's concatenated address string
         $address = '';
+        $city = '';
+        $state = '';
+        $zip = '';
         $detectedCountry = null;
         if (! empty($rawAddress)) {
             // Split by middle dot dot (·) — Google uses this to separate fields
@@ -217,6 +220,18 @@ class BusinessParser
             }
 
             $address = implode(', ', $cleanAddressParts);
+
+            // 5. Try to extract City, State, and Zip from the cleaned address
+            // Matches formats like "City, ST 12345" or "City, State 12345" or "City 12345"
+            // We use the last parts of the address for this
+            if (preg_match('/(?:,\s+)?([^,]+),\s+([A-Z]{2}(?:\s+[A-Z]{2})?)\s+(\d{5}(?:-\d{4})?)$/i', $address, $m)) {
+                $city = trim($m[1]);
+                $state = trim($m[2]);
+                $zip = trim($m[3]);
+            } elseif (preg_match('/(?:,\s+)?([^,]+),\s+([A-Z]{2}(?:\s+[A-Z]{2})?)$/i', $address, $m)) {
+                $city = trim($m[1]);
+                $state = trim($m[2]);
+            }
         }
 
         // Website extraction
@@ -251,8 +266,9 @@ class BusinessParser
             'name' => $name,
             'category' => 'Local Business',
             'address' => $address,
-            'city' => '', // Will be filled by observer if needed
-            'state' => '',
+            'city' => $city,
+            'state' => $state,
+            'zip' => $zip,
             'country' => $detectedCountry,
             'phone' => $phone,
             'website' => $website,

@@ -19,6 +19,7 @@ class Business extends Model
         'address',
         'city',
         'state',
+        'zip',
         'country',
         'phone',
         'website',
