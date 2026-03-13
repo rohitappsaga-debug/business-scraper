@@ -101,6 +101,153 @@ class BusinessParser
         ];
     }
 
+    /**
+     * Parse a Google Local Search result node.
+     *
+     * @return array<string, mixed>
+     */
+    public static function parseGoogleMapsResult(Crawler $node): array
+    {
+        // Google often stores name in div[role="heading"] or within specific data attributes
+        $name = self::extractText($node, [
+            '.dbg0pd',           // Typical name selector in local pack
+            '[role="heading"]',
+            'div[class*="title"]',
+            '.fullName',
+        ]);
+
+        $rating = null;
+        try {
+            $ratingEl = $node->filter('.yi40Hd, [aria-label*="Rated"]');
+            if ($ratingEl->count() > 0) {
+                // Try text first
+                $text = $ratingEl->text('');
+                if (preg_match('/(\d+(?:\.\d+)?)/', $text, $m)) {
+                    $rating = (float) $m[1];
+                } elseif ($ratingEl->count() > 0 && ($attr = $ratingEl->attr('aria-label'))) {
+                    // Fallback to aria-label
+                    if (preg_match('/(\d+(?:\.\d+)?)/', $attr, $m)) {
+                        $rating = (float) $m[1];
+                    }
+                }
+            }
+        } catch (\Exception) {
+        }
+
+        $reviews = null;
+        try {
+            $reviewsEl = $node->filter('.RDApEe, [aria-label*="reviews"]');
+            if ($reviewsEl->count() > 0) {
+                $text = $reviewsEl->text('');
+                if (preg_match('/([\d,]+)/', $text, $m)) {
+                    $reviews = (int) str_replace(',', '', $m[1]);
+                }
+            }
+        } catch (\Exception) {
+        }
+
+        // Address is often in the details section
+        $rawAddress = self::extractText($node, [
+            '.rllt__details > div:nth-child(3)',
+            '.rllt__details > div:nth-child(2)',
+            '.rllt__details div',
+            'div[class*="address"]',
+        ]);
+
+        $phone = self::extractText($node, [
+            '.rllt__details div span[dir="ltr"]',
+            'span[dir="ltr"]',
+            'span[class*="phone"]',
+            'div[class*="phone"]',
+        ]);
+
+        // Post-process Google's concatenated address string
+        $address = '';
+        $detectedCountry = null;
+        if (! empty($rawAddress)) {
+            // Split by middle dot dot (·) — Google uses this to separate fields
+            $parts = array_map('trim', explode('·', $rawAddress));
+            $cleanAddressParts = [];
+
+            foreach ($parts as $part) {
+                // 1. Check if it's a phone number (and we don't have one yet)
+                if (empty($phone) && preg_match('/(\+\d{1,3}\s?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/', $part)) {
+                    $phone = $part;
+
+                    continue;
+                }
+
+                // 2. Check if it's "years in business"
+                if (preg_match('/years in business/i', $part)) {
+                    continue;
+                }
+
+                // 3. Check if it's a rating like "4.5(123)"
+                if (preg_match('/^\d\.\d\(\d+\)$/', $part)) {
+                    continue;
+                }
+
+                // 4. Check for country (either at end of part with comma or exact match)
+                if (preg_match('/(?:, )?(US|United States|India|United Arab Emirates|UAE)$/i', $part, $m)) {
+                    $detectedCountry = trim($m[1]);
+                    // Remove country and any preceding comma/space
+                    $part = preg_replace('/(?:, )?(US|United States|India|United Arab Emirates|UAE)$/i', '', $part);
+                    // Trim trailing separators like dashes or commas that might be left over
+                    $part = trim($part, " \t\n\r\0\x0B,-");
+
+                    if (empty($part)) {
+                        continue;
+                    }
+                }
+
+                $cleanAddressParts[] = $part;
+            }
+
+            $address = implode(', ', $cleanAddressParts);
+        }
+
+        // Website extraction
+        $website = '';
+        try {
+            // First try the specific "Website" button link
+            $websiteEl = $node->filter('a.L48Cpd, a[aria-label*="Website"], a[href*="http"]:not([href*="google.com"])');
+            if ($websiteEl->count() > 0) {
+                $href = $websiteEl->attr('href');
+                if ($href && ! str_contains($href, 'google.com')) {
+                    $website = $href;
+                }
+            }
+
+            // Fallback: search all links
+            if (empty($website)) {
+                $links = $node->filter('a[href*="http"]');
+                $links->each(function (Crawler $link) use (&$website) {
+                    if (! empty($website)) {
+                        return;
+                    }
+                    $href = $link->attr('href');
+                    if ($href && ! str_contains($href, 'google.com') && ! str_contains($href, 'maps.google')) {
+                        $website = $href;
+                    }
+                });
+            }
+        } catch (\Exception) {
+        }
+
+        return [
+            'name' => $name,
+            'category' => 'Local Business',
+            'address' => $address,
+            'city' => '', // Will be filled by observer if needed
+            'state' => '',
+            'country' => $detectedCountry,
+            'phone' => $phone,
+            'website' => $website,
+            'rating' => $rating,
+            'reviews_count' => $reviews,
+        ];
+    }
+
     public static function randomUserAgent(): string
     {
         $agents = config('scraper.user_agents', [

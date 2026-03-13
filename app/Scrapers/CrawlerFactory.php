@@ -3,7 +3,6 @@
 namespace App\Scrapers;
 
 use App\Models\ScrapingJob;
-use App\Scrapers\Crawlers\DuckDuckGoCrawler;
 use App\Scrapers\Crawlers\YellowPagesCrawler;
 use App\Scrapers\Observers\BusinessCrawler;
 
@@ -16,13 +15,12 @@ class CrawlerFactory
     {
         $location = strtolower($scrapingJob->location);
 
-        // ALWAYS use DuckDuckGo as primary because directory sites like YellowPages
-        // aggressively block automated requests (403). DDG is much more reliable.
+        // User requested Google Maps as the main source.
+        // It's rich in data and works globally.
         if ($scrapingJob->source !== 'yellowpages_force') {
-            return DuckDuckGoCrawler::crawl($scrapingJob);
+            return Crawlers\GoogleMapsCrawler::crawl($scrapingJob);
         }
 
-        // Only use Yellow Pages if specifically forced (not recommended for production scrapers)
         return YellowPagesCrawler::crawl($scrapingJob);
     }
 

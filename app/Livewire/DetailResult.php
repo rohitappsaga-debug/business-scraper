@@ -40,7 +40,7 @@ class DetailResult extends Component
                 $model->country,
             ]))),
             'city_state' => trim(implode(', ', array_filter([$model->city, $model->state]))),
-            'postal_country' => trim(implode(', ', array_filter([$model->zip, $model->country ?? 'US']))),
+            'postal_country' => trim(implode(', ', array_filter([$model->zip, $model->country]))),
             'phone' => $model->phone ?? 'Not available',
             'email' => $primaryEmail,
             'website' => $model->website ?? 'Not available',
