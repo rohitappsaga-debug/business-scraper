@@ -128,4 +128,48 @@ HTML;
         $this->assertEquals('510 W 45th St apt 11g', $result['address']);
         $this->assertEquals('+1 646-580-7524', $result['phone']);
     }
+
+    public function test_parse_google_maps_result_with_indian_landline_embedded(): void
+    {
+        // Case: "Aurobindo Society Rd, near Sandesh Press, 079 2684 0123"
+        $html = <<<'HTML'
+            <div class="test-node">
+                <div class="dbg0pd">Aurobindo Society</div>
+                <div class="rllt__details">
+                    <div>Education</div>
+                    <div></div>
+                    <div>Aurobindo Society Rd, near Sandesh Press, 079 2684 0123</div>
+                </div>
+            </div>
+HTML;
+        $crawler = new Crawler($html);
+        $node = $crawler->filter('.test-node');
+
+        $result = BusinessParser::parseGoogleMapsResult($node);
+
+        $this->assertEquals('Aurobindo Society Rd, near Sandesh Press', $result['address']);
+        $this->assertEquals('079 2684 0123', $result['phone']);
+    }
+
+    public function test_parse_google_maps_result_with_another_indian_format(): void
+    {
+        // Case: "HB Kapadia School Rd, 079 2741 4140"
+        $html = <<<'HTML'
+            <div class="test-node">
+                <div class="dbg0pd">HB Kapadia</div>
+                <div class="rllt__details">
+                    <div>School</div>
+                    <div></div>
+                    <div>HB Kapadia School Rd, 079 2741 4140</div>
+                </div>
+            </div>
+HTML;
+        $crawler = new Crawler($html);
+        $node = $crawler->filter('.test-node');
+
+        $result = BusinessParser::parseGoogleMapsResult($node);
+
+        $this->assertEquals('HB Kapadia School Rd', $result['address']);
+        $this->assertEquals('079 2741 4140', $result['phone']);
+    }
 }

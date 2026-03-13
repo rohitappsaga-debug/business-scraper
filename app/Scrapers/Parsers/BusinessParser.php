@@ -171,8 +171,21 @@ class BusinessParser
 
             foreach ($parts as $part) {
                 // 1. Check if it's a phone number (and we don't have one yet)
-                if (empty($phone) && preg_match('/(\+\d{1,3}\s?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/', $part)) {
-                    $phone = $part;
+                // Use a more robust regex to catch international and local formats
+                $phoneRegex = '/(?:\+?\d{1,3}[\s.-]?)?\(?\d{2,5}\)?[\s.-]?\d{3,4}[\s.-]?\d{3,4}/';
+                if (preg_match($phoneRegex, $part, $matches)) {
+                    // Extract the phone number if we don't have one yet
+                    if (empty($phone)) {
+                        $phone = trim($matches[0]);
+                        // If there's content before/after the phone in this part, keep it in address
+                        $newPart = trim(str_replace($matches[0], '', $part), " \t\n\r\0\x0B,-");
+                        if (! empty($newPart)) {
+                            $cleanAddressParts[] = $newPart;
+                        }
+                    } else {
+                        // We already have a phone, so this part (even if it contains a phone) might be address-related or double-listed
+                        $cleanAddressParts[] = $part;
+                    }
 
                     continue;
                 }
