@@ -209,6 +209,28 @@ class BusinessCrawler extends CrawlObserver
             'dedup_hash' => $hash,
         ];
 
+        // Final cleanup: if phone is in address, strip it
+        $phoneRegex = '/(?:\+?\d{1,4}[\s.-]?)?(?:\(?\d{1,5}\)?[\s.-]?)?\d{2,4}[\s.-]?\d{3,4}[\s.-]?\d{3,4}/';
+
+        // 1. If we have a phone, try to strip it directly
+        if (! empty($updateData['phone']) && ! empty($updateData['address'])) {
+            $phone = $updateData['phone'];
+            if (str_contains($updateData['address'], $phone)) {
+                $updateData['address'] = trim(str_replace($phone, '', $updateData['address']), " \t\n\r\0\x0B,-·");
+            }
+        }
+
+        // 2. Also run regex on address to catch any other embedded phones
+        if (! empty($updateData['address'])) {
+            if (preg_match($phoneRegex, $updateData['address'], $matches)) {
+                $foundPhone = $matches[0];
+                if (empty($updateData['phone'])) {
+                    $updateData['phone'] = trim($foundPhone);
+                }
+                $updateData['address'] = trim(str_replace($foundPhone, '', $updateData['address']), " \t\n\r\0\x0B,-·");
+            }
+        }
+
         if ($business) {
             $business->update($updateData);
         } else {
