@@ -205,10 +205,10 @@ class BusinessParser
                 }
 
                 // 4. Check for country (either at end of part with comma or exact match)
-                if (preg_match('/(?:, )?(US|United States|India|United Arab Emirates|UAE)$/i', $part, $m)) {
+                if (preg_match('/(?:, )?(US|United States|India|United Arab Emirates|UAE|Japan|UK|United Kingdom)$/i', $part, $m)) {
                     $detectedCountry = trim($m[1]);
                     // Remove country and any preceding comma/space
-                    $part = preg_replace('/(?:, )?(US|United States|India|United Arab Emirates|UAE)$/i', '', $part);
+                    $part = preg_replace('/(?:, )?(US|United States|India|United Arab Emirates|UAE|Japan|UK|United Kingdom)$/i', '', $part);
                     // Trim trailing separators like dashes or commas that might be left over
                     $part = trim($part, " \t\n\r\0\x0B,-");
 

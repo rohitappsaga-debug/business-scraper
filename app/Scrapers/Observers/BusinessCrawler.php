@@ -264,6 +264,8 @@ class BusinessCrawler extends CrawlObserver
             'USA' => 'United States',
             'UK' => 'United Kingdom',
             'London' => 'United Kingdom',
+            'Tokyo' => 'Japan',
+            'Japan' => 'Japan',
         ];
 
         foreach ($mappings as $key => $country) {
