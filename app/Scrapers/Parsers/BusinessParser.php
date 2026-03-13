@@ -52,14 +52,7 @@ class BusinessParser
         try {
             $websiteLink = $card->filter('a.track-visit-website, a[href*="yellowpages.com/url"]');
             if ($websiteLink->count() > 0) {
-                $href = $websiteLink->attr('href');
-                // YP wraps external URLs — extract the real URL
-                if (str_contains($href, 'redirect')) {
-                    parse_str(parse_url($href, PHP_URL_QUERY), $params);
-                    $website = $params['url'] ?? $params['website'] ?? $href;
-                } else {
-                    $website = $href;
-                }
+                $website = self::cleanWebsiteUrl($websiteLink->attr('href'), 'https://www.yellowpages.com');
             }
         } catch (\Exception) {
         }
@@ -108,144 +101,198 @@ class BusinessParser
      */
     public static function parseGoogleMapsResult(Crawler $node): array
     {
-        // Google often stores name in div[role="heading"] or within specific data attributes
-        $name = self::extractText($node, [
-            '.dbg0pd',           // Typical name selector in local pack
-            '[role="heading"]',
-            'div[class*="title"]',
-            '.fullName',
-        ]);
+        // Google Local Pack results often have a complex concatenated string in the first few children
+        // Example: "Business Name 4.5(20) · Category · Address"
 
+        $name = self::extractText($node, ['.dbg0pd', '[role="heading"]', 'div[class*="title"]']);
         $rating = null;
-        try {
-            $ratingEl = $node->filter('.yi40Hd, [aria-label*="Rated"]');
-            if ($ratingEl->count() > 0) {
-                // Try text first
-                $text = $ratingEl->text('');
-                if (preg_match('/(\d+(?:\.\d+)?)/', $text, $m)) {
-                    $rating = (float) $m[1];
-                } elseif ($ratingEl->count() > 0 && ($attr = $ratingEl->attr('aria-label'))) {
-                    // Fallback to aria-label
-                    if (preg_match('/(\d+(?:\.\d+)?)/', $attr, $m)) {
-                        $rating = (float) $m[1];
-                    }
-                }
-            }
-        } catch (\Exception) {
-        }
-
         $reviews = null;
-        try {
-            $reviewsEl = $node->filter('.RDApEe, [aria-label*="reviews"]');
-            if ($reviewsEl->count() > 0) {
-                $text = $reviewsEl->text('');
-                if (preg_match('/([\d,]+)/', $text, $m)) {
-                    $reviews = (int) str_replace(',', '', $m[1]);
+        $category = 'Local Business';
+        $rawAddress = '';
+        $phone = '';
+
+        // Try to find the details container
+        $detailsNode = $node->filter('.rllt__details');
+        if ($detailsNode->count() > 0) {
+            $divs = $detailsNode->filter('div');
+
+            // First div often contains the rating/category line
+            if ($divs->count() > 0) {
+                $line1 = trim($divs->eq(0)->text(''));
+
+                // Extract rating and reviews if present: "4.5(20) · Category"
+                if (preg_match('/(\d+(?:\.\d+)?)\s*\(([\d,]+)\)\s*·\s*(.*)/', $line1, $m)) {
+                    $rating = (float) $m[1];
+                    $reviews = (int) str_replace(',', '', $m[2]);
+                    $category = trim($m[3]);
+                } elseif (preg_match('/·\s*(.*)/', $line1, $m)) {
+                    $category = trim($m[1]);
                 }
             }
-        } catch (\Exception) {
+
+            // Other divs contain address, hours, and phone
+            $divs->each(function (Crawler $div, $i) use (&$rawAddress, &$phone) {
+                $text = trim($div->text(''));
+                if ($i === 0) {
+                    return;
+                } // Already handled rating/category line
+
+                // Detect phone number
+                if (preg_match('/(\+\d{1,3}\s?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/', $text, $m)) {
+                    $phone = $text;
+
+                    return;
+                }
+
+                // Skip snippets like "Open · Closes 8 pm" or review snippets
+                if (preg_match('/(Open|Closed) ·/i', $text) || str_contains($text, '"')) {
+                    return;
+                }
+
+                // If it looks like an address (has street-like patterns or multiple parts)
+                if (empty($rawAddress) && strlen($text) > 5) {
+                    $rawAddress = $text;
+                }
+            });
         }
 
-        // Address is often in the details section
-        $rawAddress = self::extractText($node, [
-            '.rllt__details > div:nth-child(3)',
-            '.rllt__details > div:nth-child(2)',
-            '.rllt__details div',
-            'div[class*="address"]',
-        ]);
-
-        $phone = self::extractText($node, [
-            '.rllt__details div span[dir="ltr"]',
-            'span[dir="ltr"]',
-            'span[class*="phone"]',
-            'div[class*="phone"]',
-        ]);
-
-        // Post-process Google's concatenated address string
-        $address = '';
-        $detectedCountry = null;
-        if (! empty($rawAddress)) {
-            // Split by middle dot dot (·) — Google uses this to separate fields
-            $parts = array_map('trim', explode('·', $rawAddress));
-            $cleanAddressParts = [];
-
-            foreach ($parts as $part) {
-                // 1. Check if it's a phone number (and we don't have one yet)
-                if (empty($phone) && preg_match('/(\+\d{1,3}\s?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/', $part)) {
-                    $phone = $part;
-
-                    continue;
-                }
-
-                // 2. Check if it's "years in business"
-                if (preg_match('/years in business/i', $part)) {
-                    continue;
-                }
-
-                // 3. Check if it's a rating like "4.5(123)"
-                if (preg_match('/^\d\.\d\(\d+\)$/', $part)) {
-                    continue;
-                }
-
-                // 4. Check for country (either at end of part with comma or exact match)
-                if (preg_match('/(?:, )?(US|United States|India|United Arab Emirates|UAE)$/i', $part, $m)) {
-                    $detectedCountry = trim($m[1]);
-                    // Remove country and any preceding comma/space
-                    $part = preg_replace('/(?:, )?(US|United States|India|United Arab Emirates|UAE)$/i', '', $part);
-                    // Trim trailing separators like dashes or commas that might be left over
-                    $part = trim($part, " \t\n\r\0\x0B,-");
-
-                    if (empty($part)) {
-                        continue;
-                    }
-                }
-
-                $cleanAddressParts[] = $part;
-            }
-
-            $address = implode(', ', $cleanAddressParts);
-        }
-
-        // Website extraction
+        // Secondary fallback for website - look for standard buttons or aria-labels
         $website = '';
         try {
-            // First try the specific "Website" button link
-            $websiteEl = $node->filter('a.L48Cpd, a[aria-label*="Website"], a[href*="http"]:not([href*="google.com"])');
+            $websiteEl = $node->filter('a.L48Cpd, a[aria-label*="Website"], a.ab_button[href*="http"], a[href*="googleadservices.com"]');
             if ($websiteEl->count() > 0) {
-                $href = $websiteEl->attr('href');
-                if ($href && ! str_contains($href, 'google.com')) {
-                    $website = $href;
-                }
-            }
-
-            // Fallback: search all links
-            if (empty($website)) {
-                $links = $node->filter('a[href*="http"]');
-                $links->each(function (Crawler $link) use (&$website) {
-                    if (! empty($website)) {
-                        return;
-                    }
-                    $href = $link->attr('href');
-                    if ($href && ! str_contains($href, 'google.com') && ! str_contains($href, 'maps.google')) {
-                        $website = $href;
-                    }
-                });
+                $website = self::cleanWebsiteUrl($websiteEl->attr('href'), 'https://www.google.com');
             }
         } catch (\Exception) {
+        }
+
+        // Separate extraction for description since it's usually in a different tab or hidden
+        $description = self::extractText($node, ['.Y_7S0 .V67S5c', 'div[jsaction*="pane.desc"]']);
+
+        // Final address cleaning
+        $address = $rawAddress;
+        $detectedCountry = null;
+        if (! empty($address)) {
+            // Remove country from end if found
+            if (preg_match('/(?:, )?(US|United States|India|United Arab Emirates|UAE)$/i', $address, $m)) {
+                $detectedCountry = trim($m[1]);
+                $address = preg_replace('/(?:, )?(US|United States|India|United Arab Emirates|UAE)$/i', '', $address);
+                $address = trim($address, " \t\n\r\0\x0B,-");
+            }
         }
 
         return [
-            'name' => $name,
-            'category' => 'Local Business',
+            'name' => $name ?: 'Unknown Business',
+            'category' => $category,
+            'description' => $description,
             'address' => $address,
-            'city' => '', // Will be filled by observer if needed
+            'city' => '', // Filled by observer/enricher
             'state' => '',
             'country' => $detectedCountry,
             'phone' => $phone,
             'website' => $website,
             'rating' => $rating,
             'reviews_count' => $reviews,
+            'opening_hours' => [], // Usually needs a separate detail crawl
         ];
+    }
+
+    /**
+     * Clean and resolve a website URL from various redirect wrappers.
+     */
+    public static function cleanWebsiteUrl(string $url, ?string $baseUrl = null): string
+    {
+        if (empty($url)) {
+            return '';
+        }
+
+        // Handle protocol-relative URLs
+        if (str_starts_with($url, '//')) {
+            $url = 'https:'.$url;
+        }
+
+        // Resolve relative URLs if base URL is provided
+        if ($baseUrl && ! str_starts_with($url, 'http')) {
+            $url = rtrim($baseUrl, '/').'/'.ltrim($url, '/');
+        }
+
+        // Handle Google Redirects
+        if (str_contains($url, 'google.com/url?q=')) {
+            parse_str(parse_url($url, PHP_URL_QUERY), $query);
+            $url = $query['q'] ?? $url;
+        }
+
+        // Handle Google Search Redirects (e.g. /url?url=)
+        if (str_contains($url, '/url?url=')) {
+            parse_str(parse_url($url, PHP_URL_QUERY), $query);
+            $url = $query['url'] ?? $url;
+        }
+
+        // Handle Google Ads (aclk) - we often can't unwrap these easily, but we can try to get the adurl
+        if (str_contains($url, '/aclk?')) {
+            parse_str(parse_url($url, PHP_URL_QUERY), $query);
+            if (! empty($query['adurl'])) {
+                $url = $query['adurl'];
+            }
+        }
+
+        // Handle DuckDuckGo Redirects
+        if (str_contains($url, 'duckduckgo.com/l/?uddg=')) {
+            parse_str(parse_url($url, PHP_URL_QUERY), $query);
+            $url = $query['uddg'] ?? $url;
+        }
+
+        // Remove any tracking params if it's a direct URL now
+        if (str_contains($url, 'utm_')) {
+            $parts = parse_url($url);
+            if (isset($parts['query'])) {
+                parse_str($parts['query'], $query);
+                $query = array_filter($query, fn ($k) => ! str_starts_with($k, 'utm_'), ARRAY_FILTER_USE_KEY);
+                $newQuery = http_build_query($query);
+                $url = ($parts['scheme'] ?? 'https').'://'.($parts['host'] ?? '').($parts['path'] ?? '').($newQuery ? '?'.$newQuery : '');
+            }
+        }
+
+        return $url;
+    }
+
+    /**
+     * Generate a fallback description if none is available.
+     */
+    public static function generateFallbackDescription(string $name, string $category, string $address): string
+    {
+        $location = '';
+        if (! empty($address)) {
+            $parts = explode(',', $address);
+            $location = trim(end($parts));
+        }
+
+        return "{$name} is a {$category} located in {$location} specializing in professional services and customer care.";
+    }
+
+    /**
+     * Parse opening hours from a table.
+     *
+     * @return array<string, string>
+     */
+    private static function parseOpeningHours(Crawler $table): array
+    {
+        $hours = [];
+        try {
+            $table->filter('tr')->each(function (Crawler $tr) use (&$hours) {
+                $cells = $tr->filter('td');
+                if ($cells->count() >= 2) {
+                    $day = strtolower(trim($cells->eq(0)->text('')));
+                    $time = trim($cells->eq(1)->text(''));
+                    if (! empty($day)) {
+                        $hours[$day] = $time;
+                    }
+                }
+            });
+        } catch (\Exception) {
+        }
+
+        return $hours;
     }
 
     public static function randomUserAgent(): string

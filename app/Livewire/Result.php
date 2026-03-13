@@ -44,6 +44,20 @@ class Result extends Component
         }
     }
 
+    public function refreshStatus(): void
+    {
+        if ($this->jobId) {
+            $job = ScrapingJob::find($this->jobId);
+            if ($job) {
+                $this->scrapingJob = [
+                    'id' => $job->id,
+                    'status' => $job->status,
+                    'results_count' => $job->results_count,
+                ];
+            }
+        }
+    }
+
     public function getTotalResultsProperty(): int
     {
         return $this->buildQuery()->count();

@@ -7,7 +7,6 @@ use App\Models\BusinessEmail;
 use App\Scrapers\Parsers\BusinessParser;
 use App\Scrapers\Parsers\EmailParser;
 use GuzzleHttp\Client;
-use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\RequestOptions;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -28,7 +27,14 @@ class ExtractEmailsJob implements ShouldQueue
     {
         $website = $this->business->website;
 
-        if (empty($website)) {
+        // Use BusinessParser to clean any lingering redirects
+        // If it starts with / it's likely a Google relative URL
+        $baseUrl = str_starts_with($website, '/') ? 'https://www.google.com' : null;
+        $website = BusinessParser::cleanWebsiteUrl($website, $baseUrl);
+
+        if (empty($website) || ! str_contains($website, '.')) {
+            Log::info('Skipping email extraction: Invalid website', ['business_id' => $this->business->id, 'website' => $website]);
+
             return;
         }
 
@@ -53,24 +59,20 @@ class ExtractEmailsJob implements ShouldQueue
 
             $emails = EmailParser::extractFromHtml($html);
 
-            // If no emails found on homepage, try common subpages
-            if (empty($emails)) {
-                $subpages = $this->discoverContactLinks($html, $website);
-                foreach ($subpages as $subpage) {
-                    try {
-                        $subResponse = $client->get($subpage);
-                        $subHtml = (string) $subResponse->getBody();
-                        $subEmails = EmailParser::extractFromHtml($subHtml);
-                        $emails = array_merge($emails, $subEmails);
-                        if (! empty($emails)) {
-                            break; // Stop if we found something
-                        }
-                    } catch (\Exception) {
-                        continue;
-                    }
+            // Also check for contact links
+            $contactLinks = $this->discoverContactLinks($html, $website);
+            foreach ($contactLinks as $link) {
+                try {
+                    $subResponse = $client->get($link);
+                    $subHtml = (string) $subResponse->getBody();
+                    $subEmails = EmailParser::extractFromHtml($subHtml);
+                    $emails = array_merge($emails, $subEmails);
+                } catch (\Exception) {
+                    continue;
                 }
-                $emails = array_values(array_unique($emails));
             }
+
+            $emails = array_values(array_unique($emails));
 
             foreach ($emails as $email) {
                 BusinessEmail::firstOrCreate(
@@ -91,7 +93,7 @@ class ExtractEmailsJob implements ShouldQueue
                 'business_id' => $this->business->id,
                 'found' => count($emails),
             ]);
-        } catch (RequestException $e) {
+        } catch (\Exception $e) {
             Log::warning('Failed to fetch website for email extraction', [
                 'business_id' => $this->business->id,
                 'website' => $website,

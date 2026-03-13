@@ -13,6 +13,8 @@ class Search extends Component
 
     public string $location = '';
 
+    public string $source = 'google_maps';
+
     public int $limit = 100;
 
     public function submit(): void
@@ -21,13 +23,14 @@ class Search extends Component
             'keyword' => 'required|string|max:255',
             'location' => 'required|string|max:255',
             'limit' => 'required|integer|min:10',
+            'source' => 'required|string|in:google_maps,yellowpages',
         ]);
 
         $scrapingJob = ScrapingJob::create([
             'keyword' => $this->keyword,
             'location' => $this->location,
             'radius' => 25,
-            'source' => 'yellowpages',
+            'source' => $this->source,
             'status' => 'pending',
         ]);
 

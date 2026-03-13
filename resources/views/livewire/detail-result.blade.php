@@ -67,22 +67,41 @@
                                     <p class="text-slate-900 dark:text-white font-semibold">{{ $business['address'] }}</p>
                                 </div>
                                 <div class="space-y-1">
-                                    <label class="text-xs font-bold text-slate-400 uppercase tracking-widest">City &amp; State</label>
-                                    <p class="text-slate-900 dark:text-white font-semibold">{{ $business['city_state'] }}</p>
+                                    <label class="text-xs font-bold text-slate-400 uppercase tracking-widest">City</label>
+                                    <p class="text-slate-900 dark:text-white font-semibold">{{ $business['city'] ?: 'N/A' }}</p>
                                 </div>
                                 <div class="space-y-1">
-                                    <label class="text-xs font-bold text-slate-400 uppercase tracking-widest">Postal &amp; Country</label>
-                                    <p class="text-slate-900 dark:text-white font-semibold">{{ $business['postal_country'] }}</p>
+                                    <label class="text-xs font-bold text-slate-400 uppercase tracking-widest">State</label>
+                                    <p class="text-slate-900 dark:text-white font-semibold">{{ $business['state'] ?: 'N/A' }}</p>
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-xs font-bold text-slate-400 uppercase tracking-widest">Postal Code</label>
+                                    <p class="text-slate-900 dark:text-white font-semibold">{{ $business['postal_code'] ?: 'N/A' }}</p>
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-xs font-bold text-slate-400 uppercase tracking-widest">Country</label>
+                                    <p class="text-slate-900 dark:text-white font-semibold">{{ $business['country'] ?: 'N/A' }}</p>
                                 </div>
                             </div>
                             {{-- Map Placeholder --}}
-                            <div class="mt-8 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 aspect-[21/9] relative bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                                <div class="text-center text-slate-400">
-                                    <span class="material-symbols-outlined text-4xl mb-2 block">map</span>
-                                    <p class="text-sm">Map view of {{ $business['name'] }}</p>
-                                    <p class="text-xs mt-1">{{ $business['address'] }}</p>
+                            @if(!empty($business['latitude']) && !empty($business['longitude']))
+                                <div class="mt-8 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 aspect-[21/9] relative">
+                                    <iframe
+                                        width="100%"
+                                        height="100%"
+                                        frameborder="0" style="border:0"
+                                        src="https://www.google.com/maps?q={{ $business['latitude'] }},{{ $business['longitude'] }}&output=embed" allowfullscreen>
+                                    </iframe>
                                 </div>
-                            </div>
+                            @else
+                                <div class="mt-8 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 aspect-[21/9] relative bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                                    <div class="text-center text-slate-400">
+                                        <span class="material-symbols-outlined text-4xl mb-2 block">map</span>
+                                        <p class="text-sm">Map view not available</p>
+                                        <p class="text-xs mt-1">{{ $business['address'] }}</p>
+                                    </div>
+                                </div>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -223,12 +242,14 @@
                             <div class="space-y-3">
                                 <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Business Hours</p>
                                 <ul class="text-sm space-y-2">
-                                    @foreach($business['hours'] as $hour)
-                                        <li class="flex justify-between {{ $hour['time'] === 'Closed' ? 'text-slate-400' : 'text-slate-700 dark:text-slate-300' }}">
-                                            <span>{{ $hour['day'] }}</span>
-                                            <span class="font-medium">{{ $hour['time'] }}</span>
+                                    @forelse($business['hours'] as $day => $time)
+                                        <li class="flex justify-between {{ ($time === 'Closed' || str_contains(strtolower($time), 'closed')) ? 'text-slate-400' : 'text-slate-700 dark:text-slate-300' }}">
+                                            <span class="capitalize">{{ $day }}</span>
+                                            <span class="font-medium text-right ml-4">{{ $time }}</span>
                                         </li>
-                                    @endforeach
+                                    @empty
+                                        <li class="text-slate-400 italic">Opening hours not available</li>
+                                    @endforelse
                                 </ul>
                             </div>
 

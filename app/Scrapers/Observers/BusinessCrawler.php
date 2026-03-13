@@ -2,6 +2,7 @@
 
 namespace App\Scrapers\Observers;
 
+use App\Jobs\EnrichBusinessJob;
 use App\Jobs\ExtractEmailsJob;
 use App\Models\Business;
 use App\Models\ScrapingJob;
@@ -62,9 +63,14 @@ class BusinessCrawler extends CrawlObserver
      */
     private function parseSearchResultsPage(Crawler $page, string $url): void
     {
+        if (str_contains($url, 'duckduckgo.com')) {
+            $this->parseDuckDuckGoResults($page);
 
-        if (str_contains($url, 'google.com')) {
-            $this->parseGoogleMapsResults($page);
+            return;
+        }
+
+        if (str_contains($url, 'google.com/search') || $this->scrapingJob->source === 'google_maps') {
+            $this->parseGoogleResults($page);
 
             return;
         }
@@ -72,9 +78,8 @@ class BusinessCrawler extends CrawlObserver
         // YellowPages search result cards
         $selectors = [
             '.v-card',
-            '.result',
-            '.info',
             'div[class*="v-card"]',
+            '.result .info',
         ];
 
         foreach ($selectors as $selector) {
@@ -97,42 +102,80 @@ class BusinessCrawler extends CrawlObserver
     }
 
     /**
-     * Parse Google Local Search results (tbm=lcl).
+     * Parse Google Local Search results.
      */
-    private function parseGoogleMapsResults(Crawler $page): void
+    private function parseGoogleResults(Crawler $page): void
     {
-        // Google Local Search result containers
+        // Try to find the local results container - prioritize high-level containers that include website buttons
         $selectors = [
-            'div.uMdZh',    // Observation from debug HTML
-            'div.VkpSyc',   // Alternative packed layout
-            'a[data-cid]',  // Links with Client IDs
-            'div[data-cid]', // Any div with a CID
+            '.Vkp96c',
+            'div[data-cid]',
+            '.tF2Cxc',
+            'div[jscontroller="At6S7b"]',
+            '.rllt__details', // Fallback to just text details if parent isn't found
         ];
 
         foreach ($selectors as $selector) {
-            try {
-                $nodes = $page->filter($selector);
-                if ($nodes->count() > 0) {
-                    $nodes->each(function (Crawler $node) {
-                        try {
-                            $data = BusinessParser::parseGoogleMapsResult($node);
-                            if (! empty($data['name'])) {
-                                $this->saveBusiness($data);
-                            }
-                        } catch (Exception $e) {
-                            Log::debug('Failed to parse Google Maps node', ['error' => $e->getMessage()]);
-                        }
-                    });
+            $nodes = $page->filter($selector);
+            if ($nodes->count() > 0) {
+                $nodes->each(function (Crawler $node) {
+                    $this->processGoogleResult($node);
+                });
 
-                    return;
-                }
-            } catch (Exception) {
-                continue;
+                return;
             }
         }
+    }
 
-        // Fallback to searching for structured lists
-        $this->parseFallbackListings($page);
+    private function processGoogleResult(Crawler $node): void
+    {
+        try {
+            $data = BusinessParser::parseGoogleMapsResult($node);
+
+            if (empty($data['name'])) {
+                return;
+            }
+
+            $this->saveBusiness($data);
+        } catch (Exception $e) {
+            Log::debug('Failed to parse Google result', ['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Parse DuckDuckGo HTML search results.
+     */
+    private function parseDuckDuckGoResults(Crawler $page): void
+    {
+        $page->filter('.result__body')->each(function (Crawler $result) {
+            try {
+                $titleEl = $result->filter('.result__title .result__a');
+                if ($titleEl->count() === 0) {
+                    return;
+                }
+
+                $name = trim($titleEl->text(''));
+                $website = BusinessParser::cleanWebsiteUrl($titleEl->attr('href'), 'https://duckduckgo.com');
+                $snippet = $result->filter('.result__snippet')->count() > 0
+                    ? trim($result->filter('.result__snippet')->text(''))
+                    : '';
+
+                if (empty($name)) {
+                    return;
+                }
+
+                $this->saveBusiness([
+                    'name' => $name,
+                    'website' => $website,
+                    'category' => 'Search Result',
+                    'address' => $snippet, // Snippet often contains location info
+                    'city' => $this->scrapingJob->location,
+                    'phone' => '',
+                ]);
+            } catch (Exception $e) {
+                Log::debug('Failed to parse DDG result', ['error' => $e->getMessage()]);
+            }
+        });
     }
 
     private function processBusinessCard(Crawler $card): void
@@ -190,71 +233,36 @@ class BusinessCrawler extends CrawlObserver
 
         $hash = Business::generateDedupHash($name, $address);
 
-        $business = Business::where('dedup_hash', $hash)->first();
+        $business = Business::firstOrCreate(
+            ['dedup_hash' => $hash],
+            [
+                'scraping_job_id' => $this->scrapingJob->id,
+                'name' => $name,
+                'category' => $data['category'] ?? null,
+                'description' => $data['description'] ?? null,
+                'address' => $address ?: null,
+                'city' => $data['city'] ?? $this->scrapingJob->location,
+                'state' => $data['state'] ?? null,
+                'country' => $data['country'] ?? 'US',
+                'phone' => $data['phone'] ?? null,
+                'website' => $data['website'] ?? null,
+                'rating' => $data['rating'] ?? null,
+                'reviews_count' => $data['reviews_count'] ?? null,
+                'opening_hours' => $data['opening_hours'] ?? null,
+                'source' => $this->scrapingJob->source,
+                'dedup_hash' => $hash,
+            ]
+        );
 
-        $updateData = [
-            'scraping_job_id' => $this->scrapingJob->id,
-            'name' => $name,
-            'category' => $data['category'] ?? ($business->category ?? null),
-            'address' => $address ?: ($business->address ?? null),
-            'city' => $data['city'] ?? $this->scrapingJob->location,
-            'state' => $data['state'] ?? ($business->state ?? null),
-            'country' => $data['country'] ?? ($business->country ?? $this->deriveCountryFromLocation()),
-            'phone' => $data['phone'] ?: ($business->phone ?? null),
-            'website' => $data['website'] ?: ($business->website ?? null),
-            'rating' => $data['rating'] ?? ($business->rating ?? null),
-            'reviews_count' => $data['reviews_count'] ?? ($business->reviews_count ?? null),
-            'source' => $this->scrapingJob->source,
-            'dedup_hash' => $hash,
-        ];
+        if ($business->wasRecentlyCreated) {
+            $this->savedCount++;
 
-        if ($business) {
-            $business->update($updateData);
-        } else {
-            $business = Business::create($updateData);
-        }
+            // Trigger enrichment
+            EnrichBusinessJob::dispatch($business)->onQueue('default');
 
-        $this->savedCount++;
-
-        // Trigger email extraction if website exists and we haven't found emails yet
-        if (! empty($business->website) && $business->businessEmails()->count() === 0) {
-            ExtractEmailsJob::dispatch($business)->onQueue('default');
-        }
-    }
-
-    /**
-     * Attempt to derive country from the scraping job's location.
-     */
-    private function deriveCountryFromLocation(): ?string
-    {
-        $location = $this->scrapingJob->location;
-
-        if (empty($location)) {
-            return null;
-        }
-
-        // Common mapping for known locations
-        $mappings = [
-            'Dubai' => 'United Arab Emirates',
-            'UAE' => 'United Arab Emirates',
-            'India' => 'India',
-            'USA' => 'United States',
-            'UK' => 'United Kingdom',
-            'London' => 'United Kingdom',
-        ];
-
-        foreach ($mappings as $key => $country) {
-            if (str_contains(strtolower($location), strtolower($key))) {
-                return $country;
+            if (! empty($business->website)) {
+                ExtractEmailsJob::dispatch($business)->onQueue('default');
             }
         }
-
-        // If location contains a comma, the last part might be the country
-        $parts = array_map('trim', explode(',', $location));
-        if (count($parts) > 1) {
-            return end($parts);
-        }
-
-        return null;
     }
 }
