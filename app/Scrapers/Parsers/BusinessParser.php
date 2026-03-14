@@ -46,11 +46,13 @@ class BusinessParser
             '[itemprop="telephone"]',
             '.phones.phone.primary',
             '.phone',
+            '.phone.primary',
+            '.business-phone',
         ]);
 
         $website = '';
         try {
-            $websiteLink = $card->filter('a.track-visit-website, a[href*="yellowpages.com/url"]');
+            $websiteLink = $card->filter('a.track-visit-website, a[href*="yellowpages.com/url"], a.website-link');
             if ($websiteLink->count() > 0) {
                 $href = $websiteLink->attr('href');
                 // YP wraps external URLs — extract the real URL
@@ -102,6 +104,68 @@ class BusinessParser
     }
 
     /**
+     * Parse a YellowPages business detail page.
+     *
+     * @return array<string, mixed>
+     */
+    public static function parseYellowPagesDetailPage(Crawler $page): array
+    {
+        $name = self::extractText($page, ['h1', '.dock-section h1', '.business-name']);
+        $category = self::extractText($page, ['.categories a', '.categories']);
+
+        $street = self::extractText($page, ['.street-address', '[itemprop="streetAddress"]']);
+        $city = self::extractText($page, ['.locality', '[itemprop="addressLocality"]']);
+        $state = self::extractText($page, ['.region', '[itemprop="addressRegion"]']);
+        $zip = self::extractText($page, ['.zip', '[itemprop="postalCode"]']);
+
+        $phone = self::extractText($page, [
+            '.phone',
+            '[itemprop="telephone"]',
+            '.phone.primary',
+            '.business-phone',
+        ]);
+
+        $website = null;
+        try {
+            $websiteLink = $page->filter('a.track-visit-website, a.website-link, .dock-section a[href*="http"]:not([href*="yellowpages.com"])');
+            if ($websiteLink->count() > 0) {
+                $href = $websiteLink->first()->attr('href');
+                if (str_contains($href, 'redirect')) {
+                    parse_str(parse_url($href, PHP_URL_QUERY), $params);
+                    $website = $params['url'] ?? $params['website'] ?? $href;
+                } else {
+                    $website = $href;
+                }
+            }
+        } catch (\Exception) {
+        }
+
+        $rating = null;
+        try {
+            $ratingEl = $page->filter('.rating [class*="stars"], [class*="rating"]');
+            if ($ratingEl->count() > 0) {
+                if (preg_match('/(\d+(?:\.\d+)?)/', $ratingEl->attr('class') ?? '', $m)) {
+                    $rating = (float) $m[1];
+                }
+            }
+        } catch (\Exception) {
+        }
+
+        return [
+            'name' => $name,
+            'category' => $category,
+            'address' => $street,
+            'city' => $city,
+            'state' => $state,
+            'zip' => $zip,
+            'phone' => $phone,
+            'website' => $website,
+            'rating' => $rating,
+            'reviews_count' => null,
+        ];
+    }
+
+    /**
      * Parse a Google Local Search result node.
      *
      * @return array<string, mixed>
@@ -114,11 +178,14 @@ class BusinessParser
             '[role="heading"]',
             'div[class*="title"]',
             '.fullName',
+            'div.fontHeadlineSmall',
+            'div.qBF1Pd',
+            'div.jAN3S',
         ]);
 
         $rating = null;
         try {
-            $ratingEl = $node->filter('.yi40Hd, [aria-label*="Rated"]');
+            $ratingEl = $node->filter('.yi40Hd, [aria-label*="Rated"], span[aria-label*="stars"]');
             if ($ratingEl->count() > 0) {
                 // Try text first
                 $text = $ratingEl->text('');
@@ -136,7 +203,7 @@ class BusinessParser
 
         $reviews = null;
         try {
-            $reviewsEl = $node->filter('.RDApEe, [aria-label*="reviews"]');
+            $reviewsEl = $node->filter('.RDApEe, [aria-label*="reviews"], span[aria-label*="reviews"]');
             if ($reviewsEl->count() > 0) {
                 $text = $reviewsEl->text('');
                 if (preg_match('/([\d,]+)/', $text, $m)) {
@@ -152,113 +219,81 @@ class BusinessParser
             '.rllt__details > div:nth-child(2)',
             '.rllt__details div',
             'div[class*="address"]',
+            '.W4Efsd:nth-child(2)',
+            '.l3Y9cc',
         ]);
 
-        $phone = self::extractText($node, [
+        $phone = self::extractPhone($node, [
             '.rllt__details div span[dir="ltr"]',
             'span[dir="ltr"]',
             'span[class*="phone"]',
             'div[class*="phone"]',
+            '[aria-label*="Phone"]',
+            '[data-tooltip*="phone"]',
+            'span.Us79be',
+            '.rllt__details div:last-child',
+            '.rllt__details div div:last-child',
         ]);
 
         // Post-process Google's concatenated address string
-        $address = '';
-        $city = '';
-        $state = '';
-        $zip = '';
-        $detectedCountry = null;
-        if (! empty($rawAddress)) {
-            // Split by middle dot dot (·) — Google uses this to separate fields
-            // Fallback to comma if dot is not found, but be careful with address commas
-            $separator = str_contains($rawAddress, '·') ? '·' : (preg_match('/\d\s+·\s+/', $rawAddress) ? '·' : ',');
-            $parts = array_map('trim', explode($separator, $rawAddress));
-            $cleanAddressParts = [];
+        $cleaned = self::cleanGoogleAddress($rawAddress, $phone);
 
-            // Improved phone regex: matches +XX X-XXXX-XXXX, (XXX) XXX-XXXX, XXX-XXX-XXXX, +XX (X) XXXX-XXXX, etc.
-            $phoneRegex = '/(?:\+?\d{1,4}[\s.-]?)?(?:\(?\d{1,5}\)?[\s.-]?)?\d{2,4}[\s.-]?\d{3,4}[\s.-]?\d{3,4}/';
-
-            foreach ($parts as $part) {
-                // 1. Check if it's a phone number
-                if (preg_match($phoneRegex, $part, $matches)) {
-                    $foundPhone = trim($matches[0]);
-
-                    // Extract the phone number if we don't have one yet
-                    if (empty($phone) || strlen($phone) < 5) {
-                        $phone = $foundPhone;
-                    }
-
-                    // Always strip the phone number from the part to clean the address
-                    $part = trim(str_replace($foundPhone, '', $part), " \t\n\r\0\x0B,-·");
-                    if (empty($part)) {
-                        continue;
-                    }
-                }
-
-                // 2. Check if it's "years in business"
-                if (preg_match('/years in business/i', $part)) {
-                    continue;
-                }
-
-                // 3. Check if it's a rating like "4.5(123)"
-                if (preg_match('/^\d\.\d\(\d+\)$/', $part)) {
-                    continue;
-                }
-
-                // 4. Check for country (either at end of part with comma or exact match)
-                if (preg_match('/(?:, )?(US|United States|India|United Arab Emirates|UAE|Japan|UK|United Kingdom)$/i', $part, $m)) {
-                    $detectedCountry = trim($m[1]);
-                    // Remove country and any preceding comma/space
-                    $part = preg_replace('/(?:, )?(US|United States|India|United Arab Emirates|UAE|Japan|UK|United Kingdom)$/i', '', $part);
-                    // Trim trailing separators like dashes or commas that might be left over
-                    $part = trim($part, " \t\n\r\0\x0B,-");
-
-                    if (empty($part)) {
-                        continue;
-                    }
-                }
-
-                $cleanAddressParts[] = $part;
-            }
-
-            $address = implode(', ', $cleanAddressParts);
-
-            // 5. Try to extract City, State, and Zip from the cleaned address
-            // Matches formats like "City, ST 12345" or "City, State 12345" or "City 12345"
-            // We use the last parts of the address for this
-            if (preg_match('/(?:,\s+)?([^,]+),\s+([A-Z]{2}(?:\s+[A-Z]{2})?)\s+(\d{5}(?:-\d{4})?)$/i', $address, $m)) {
-                $city = trim($m[1]);
-                $state = trim($m[2]);
-                $zip = trim($m[3]);
-            } elseif (preg_match('/(?:,\s+)?([^,]+),\s+([A-Z]{2}(?:\s+[A-Z]{2})?)$/i', $address, $m)) {
-                $city = trim($m[1]);
-                $state = trim($m[2]);
-            }
-        }
+        // Latitude/Longitude extraction...
 
         // Website extraction
-        $website = '';
+        $website = self::extractWebsite($node, [
+            'a.L48Cpd',
+            'a[aria-label*="Website"]',
+            'a[href*="http"]:not([href*="google.com"])',
+            'a[data-tooltip*="website"]',
+            'a.m606Cc',
+            'a[data-value="Website"]',
+        ]);
+
+        // Try to extract Lat/Lng if available in data attributes
+        $latitude = null;
+        $longitude = null;
+        $cid = null;
         try {
-            // First try the specific "Website" button link
-            $websiteEl = $node->filter('a.L48Cpd, a[aria-label*="Website"], a[href*="http"]:not([href*="google.com"])');
-            if ($websiteEl->count() > 0) {
-                $href = $websiteEl->attr('href');
-                if ($href && ! str_contains($href, 'google.com')) {
-                    $website = $href;
+            $latSelectors = ['[data-latitude]', '[data-lat]'];
+            $lngSelectors = ['[data-longitude]', '[data-lng]'];
+
+            foreach ($latSelectors as $sel) {
+                $el = $node->filter($sel);
+                if ($el->count() > 0) {
+                    $latitude = (float) $el->attr(str_replace(['[', ']'], '', $sel));
+                    break;
+                }
+            }
+            foreach ($lngSelectors as $sel) {
+                $el = $node->filter($sel);
+                if ($el->count() > 0) {
+                    $longitude = (float) $el->attr(str_replace(['[', ']'], '', $sel));
+                    break;
                 }
             }
 
-            // Fallback: search all links
-            if (empty($website)) {
-                $links = $node->filter('a[href*="http"]');
-                $links->each(function (Crawler $link) use (&$website) {
-                    if (! empty($website)) {
-                        return;
+            // Extract CID - very important for deep scraping
+            $cid = $node->attr('data-cid') ?: $node->attr('data-ludocid') ?: $node->attr('data-id');
+            if (empty($cid)) {
+                // Try searching in links
+                $cidLink = $node->filter('a[data-cid], a[href*="ludocid"], a[href*="cid="], a[data-id]');
+                if ($cidLink->count() > 0) {
+                    $cid = $cidLink->attr('data-cid') ?: $cidLink->attr('data-id');
+                    if (empty($cid) && preg_match('/ludocid=([^&]+)/', $cidLink->attr('href'), $m)) {
+                        $cid = $m[1];
                     }
-                    $href = $link->attr('href');
-                    if ($href && ! str_contains($href, 'google.com') && ! str_contains($href, 'maps.google')) {
-                        $website = $href;
+                    if (empty($cid) && preg_match('/cid=([^&]+)/', $cidLink->attr('href'), $m)) {
+                        $cid = $m[1];
                     }
-                });
+                }
+            }
+            // If still empty, try parsing the whole node's text for a CID-like pattern if it's in a script/data
+            if (empty($cid)) {
+                $html = $node->html();
+                if (preg_match('/0x[0-9a-f]+:0x[0-9a-f]+/', $html, $m)) {
+                    $cid = $m[0];
+                }
             }
         } catch (\Exception) {
         }
@@ -266,16 +301,239 @@ class BusinessParser
         return [
             'name' => $name,
             'category' => 'Local Business',
-            'address' => $address,
-            'city' => $city,
-            'state' => $state,
-            'zip' => $zip,
-            'country' => $detectedCountry,
-            'phone' => $phone,
+            'address' => $cleaned['address'],
+            'city' => $cleaned['city'],
+            'state' => $cleaned['state'],
+            'zip' => $cleaned['zip'],
+            'country' => $cleaned['country'],
+            'phone' => $cleaned['phone'],
             'website' => $website,
             'rating' => $rating,
             'reviews_count' => $reviews,
+            'latitude' => $latitude,
+            'longitude' => $longitude,
+            'cid' => $cid,
         ];
+    }
+
+    /**
+     * Parse a Google Maps detail page (CID or Search result detail).
+     *
+     * @return array<string, mixed>
+     */
+    public static function parseGoogleMapsDetailPage(Crawler $page): array
+    {
+        $name = self::extractText($page, ['h1', 'div[role="main"] h1', 'div.fontHeadlineLarge']);
+
+        $phone = self::extractPhone($page, [
+            '[data-tooltip*="phone"]',
+            '[aria-label*="Phone"]',
+            '[data-item-id*="phone"]',
+            '[data-value*="Phone"]',
+            'span[dir="ltr"]',
+            '.Us79be',
+            'div.Io6YTe',
+            'button[data-tooltip*="phone"]',
+        ]);
+
+        $website = self::extractWebsite($page, [
+            'a[data-tooltip*="website"]',
+            'a[aria-label*="Website"]',
+            'a.m606Cc',
+            'a.L48Cpd',
+            'a.ab_button',
+            'a[href*="http"]:not([href*="google.com"])',
+            'a[data-item-id="authority"]',
+        ]);
+
+        $address = self::extractText($page, [
+            '[data-tooltip*="address"]',
+            '[aria-label*="Address"]',
+            '[data-item-id="address"]',
+            'div.Io6YTe',
+            'div.fontBodyMedium',
+        ]);
+
+        $cleaned = self::cleanGoogleAddress($address, $phone);
+
+        return [
+            'name' => $name,
+            'address' => $cleaned['address'],
+            'phone' => $cleaned['phone'],
+            'website' => $website,
+            'country' => $cleaned['country'],
+            'city' => $cleaned['city'],
+            'state' => $cleaned['state'],
+        ];
+    }
+
+    /**
+     * Centralized helper to clean Google Maps raw address strings.
+     * Extracts and strips phone numbers, identifies country/city/state.
+     *
+     * @return array<string, mixed>
+     */
+    public static function cleanGoogleAddress(?string $rawAddress, ?string $existingPhone = null): array
+    {
+        $address = '';
+        $phone = $existingPhone;
+        $city = '';
+        $state = '';
+        $zip = '';
+        $country = null;
+
+        if (empty($rawAddress)) {
+            return compact('address', 'phone', 'city', 'state', 'zip', 'country');
+        }
+
+        // 1. Normalize whitespace: replace newlines and multiple spaces with a single space
+        $rawAddress = preg_replace('/\s+/', ' ', $rawAddress);
+
+        // 2. Identify separator and split
+        // Include Arabic comma (،) and middle dot (·)
+        $separatorPattern = '/[·,،]|(?:\d\s+·\s+)/u';
+        $parts = preg_split($separatorPattern, $rawAddress);
+        $parts = array_map('trim', array_filter($parts));
+        $cleanAddressParts = [];
+
+        // 3. Flexible phone regex
+        $phoneRegex = '/(?:\+?\d{1,4}[-.\s]?)?(?:\(?\d{1,5}\)?[-.\s]?)?\d{1,4}(?:[-.\s]?\d{1,4}){1,4}/u';
+
+        foreach ($parts as $part) {
+            // A. Check for phone number
+            // We use a loop to strip ALL phone numbers from a single part
+            $iterationCount = 0;
+            while (preg_match($phoneRegex, $part, $matches) && $iterationCount < 5) {
+                $iterationCount++;
+                $foundPhone = trim($matches[0]);
+
+                // Extract phone if missing or current is too short/invalid
+                // Sanity check: must have at least 7 digits to be considered a phone
+                if (preg_match_all('/\d/', $foundPhone) >= 7) {
+                    if (empty($phone) || strlen(preg_replace('/\D/', '', $phone)) < 7) {
+                        $phone = $foundPhone;
+                    }
+
+                    // Robust stripping: use the exact matched string to replace
+                    $part = trim(str_replace($foundPhone, '', $part), " \t\n\r\0\x0B,-·،");
+                }
+            }
+
+            if (empty($part)) {
+                continue;
+            }
+
+            // B. Skip "years in business"
+            if (preg_match('/years in business/i', $part)) {
+                continue;
+            }
+
+            // C. Skip rating-like strings "4.5(120)"
+            if (preg_match('/^\d\.\d\(\d+\)$/', $part)) {
+                continue;
+            }
+
+            // D. Check for country
+            $countryPatterns = [
+                'US', 'United States', 'USA', 'India',
+                'United Arab Emirates', 'UAE', 'Dubai',
+                'UK', 'United Kingdom', 'Great Britain',
+                'Canada', 'Australia', 'AU', 'Germany', 'Deutschland',
+                'France', 'Japan', 'JP', 'China', 'Brazil', 'Brasil',
+                'Singapore', 'Malaysia', 'Italy', 'Italia', 'Spain', 'España',
+            ];
+            $countryRegex = '/(?:, )?('.implode('|', array_map('preg_quote', $countryPatterns)).')$/i';
+
+            if (preg_match($countryRegex, $part, $m)) {
+                $country = trim($m[1]);
+                $standardized = [
+                    'UAE' => 'United Arab Emirates', 'Dubai' => 'United Arab Emirates',
+                    'USA' => 'United States', 'US' => 'United States',
+                    'UK' => 'United Kingdom', 'JP' => 'Japan', 'AU' => 'Australia',
+                ];
+                $country = $standardized[strtoupper($country)] ?? $country;
+
+                $part = preg_replace($countryRegex, '', $part);
+                $part = trim($part, " \t\n\r\0\x0B,-");
+
+                if (empty($part)) {
+                    continue;
+                }
+            }
+
+            $cleanAddressParts[] = $part;
+        }
+
+        $address = implode(', ', $cleanAddressParts);
+
+        // 4. Extract City, State, Zip from the end of the cleaned address
+        if (preg_match('/(?:,\s+)?([^,]+),\s+([A-Z]{2}(?:\s+[A-Z]{2})?)\s+(\d{5}(?:-\d{4})?)$/i', $address, $m)) {
+            $city = trim($m[1]);
+            $state = trim($m[2]);
+            $zip = trim($m[3]);
+        } elseif (preg_match('/(?:,\s+)?([^,]+),\s+([A-Z]{2}(?:\s+[A-Z]{2})?)$/i', $address, $m)) {
+            $city = trim($m[1]);
+            $state = trim($m[2]);
+        }
+
+        return compact('address', 'phone', 'city', 'state', 'zip', 'country');
+    }
+
+    /**
+     * Specialized phone extraction with regex validation.
+     */
+    private static function extractPhone(Crawler $node, array $selectors): ?string
+    {
+        // Require at least 7-8 digits to avoid matching short address segments or years
+        $phoneRegex = '/(?:\+?\d{1,4}[-.\s]?)?(?:\(?\d{1,5}\)?[-.\s]?)?\d{1,4}(?:[-.\s]?\d{1,4}){1,4}/';
+
+        foreach ($selectors as $selector) {
+            try {
+                $nodes = $node->filter($selector);
+                foreach ($nodes as $el) {
+                    $text = trim($el->textContent);
+
+                    // Skip if it contains "services", "site", etc.
+                    if (preg_match('/(?:services|site|open|closed|appointment|years)/i', $text)) {
+                        continue;
+                    }
+
+                    if (preg_match($phoneRegex, $text, $matches)) {
+                        $p = trim($matches[0]);
+                        // Final sanity check: must have at least 7 digits
+                        if (preg_match_all('/\d/', $p) >= 7) {
+                            return $p;
+                        }
+                    }
+                }
+            } catch (\Exception) {
+                continue;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Specialized website extraction.
+     */
+    private static function extractWebsite(Crawler $node, array $selectors): ?string
+    {
+        foreach ($selectors as $selector) {
+            try {
+                $el = $node->filter($selector);
+                if ($el->count() > 0) {
+                    $href = $el->first()->attr('href');
+                    if ($href && ! str_contains($href, 'google.com') && ! str_contains($href, 'maps.google') && ! str_contains($href, 'retry/enablejs')) {
+                        return $href;
+                    }
+                }
+            } catch (\Exception) {
+                continue;
+            }
+        }
+
+        return null;
     }
 
     public static function randomUserAgent(): string
@@ -301,19 +559,22 @@ class BusinessParser
      *
      * @param  list<string>  $selectors
      */
-    private static function extractText(Crawler $node, array $selectors): string
+    private static function extractText(Crawler $node, array $selectors): ?string
     {
         foreach ($selectors as $selector) {
             try {
                 $el = $node->filter($selector);
                 if ($el->count() > 0) {
-                    return trim($el->first()->text(''));
+                    $text = trim($el->first()->text(''));
+                    if ($text !== '') {
+                        return $text;
+                    }
                 }
             } catch (\Exception) {
                 continue;
             }
         }
 
-        return '';
+        return null;
     }
 }

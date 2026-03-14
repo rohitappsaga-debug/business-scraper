@@ -31,6 +31,7 @@ class Business extends Model
         'source',
         'dedup_hash',
         'description',
+        'cid',
     ];
 
     public function casts(): array
@@ -64,6 +65,79 @@ class Business extends Model
     /**
      * Get the description or a generated one.
      */
+    /**
+     * Get the country name, falling back to the scraping job's location or city if missing.
+     */
+    public function getEffectiveCountry(): string
+    {
+        if ($this->country && strtoupper($this->country) !== 'US') {
+            return $this->country;
+        }
+
+        // 1. Try to derive from scraping job location
+        if ($this->scrapingJob && $this->scrapingJob->location) {
+            $location = strtolower($this->scrapingJob->location);
+
+            // Basic check to see if job location is likely not US
+            $usKeywords = ['usa', 'united states', 'new york', 'california', 'texas', 'florida'];
+            $isLikelyUS = false;
+            foreach ($usKeywords as $kw) {
+                if (str_contains($location, $kw)) {
+                    $isLikelyUS = true;
+                    break;
+                }
+            }
+
+            if ((! $isLikelyUS && $this->country === 'US') || ! $this->country) {
+                return $this->deriveCountryFromLocationString($this->scrapingJob->location);
+            }
+        }
+
+        // 2. Fallback: try to derive from the city name
+        if ($this->city) {
+            return $this->deriveCountryFromLocationString($this->city);
+        }
+
+        return $this->country ?? 'Unknown';
+    }
+
+    /**
+     * Common derivation logic from any location string (city or job location).
+     */
+    private function deriveCountryFromLocationString(?string $location): string
+    {
+        if (! $location) {
+            return 'Unknown';
+        }
+
+        $location = trim($location);
+
+        $mappings = [
+            'Dubai' => 'United Arab Emirates',
+            'Abu Dhabi' => 'United Arab Emirates',
+            'UAE' => 'United Arab Emirates',
+            'London' => 'United Kingdom',
+            'UK' => 'United Kingdom',
+            'India' => 'India',
+            'Surat' => 'India',
+            'Mumbai' => 'India',
+            'Delhi' => 'India',
+            'Bangalore' => 'India',
+            'Pune' => 'India',
+            'Ahmedabad' => 'India',
+            'Paris' => 'France',
+            'Tokyo' => 'Japan',
+        ];
+
+        foreach ($mappings as $key => $country) {
+            if (stripos($location, $key) !== false) {
+                return $country;
+            }
+        }
+
+        return $location;
+    }
+
     public function getGeneratedDescription(): string
     {
         if ($this->description) {

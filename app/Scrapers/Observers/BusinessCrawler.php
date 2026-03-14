@@ -27,6 +27,7 @@ class BusinessCrawler extends CrawlObserver
         ?string $linkText = null
     ): void {
         $body = (string) $response->getBody();
+        $urlStr = (string) $url;
 
         if (empty($body)) {
             return;
@@ -34,9 +35,34 @@ class BusinessCrawler extends CrawlObserver
 
         $page = new Crawler($body);
 
-        $this->parseSearchResultsPage($page, (string) $url);
+        if (str_contains($urlStr, 'yellowpages.com')) {
+            // Check if it's a detail page vs search results
+            // Detail pages usually have /bus-name/lid-12345 or /info-XXXXXXXX
+            if (preg_match('/\/[^\/]+\/lid-\d+/', $urlStr) || str_contains($urlStr, '/info-')) {
+                $this->processYellowPagesDetailPage($page, $urlStr);
+            } else {
+                $this->parseSearchResultsPage($page, $urlStr);
+            }
+        } elseif (str_contains($urlStr, 'google.com')) {
+            $this->parseGoogleMapsResults($page);
+        } else {
+            // General fallback
+            $this->parseSearchResultsPage($page, $urlStr);
+        }
 
         usleep(BusinessParser::randomDelayMs() * 1000);
+    }
+
+    private function processYellowPagesDetailPage(Crawler $page, string $url): void
+    {
+        try {
+            $data = BusinessParser::parseYellowPagesDetailPage($page);
+            if (! empty($data['name'])) {
+                $this->saveBusiness($data);
+            }
+        } catch (Exception $e) {
+            Log::debug('Failed to parse YP detail page', ['url' => $url, 'error' => $e->getMessage()]);
+        }
     }
 
     public function crawlFailed(
@@ -107,6 +133,10 @@ class BusinessCrawler extends CrawlObserver
             'div.VkpSyc',   // Alternative packed layout
             'a[data-cid]',  // Links with Client IDs
             'div[data-cid]', // Any div with a CID
+            'div[role="article"]',
+            'div.Nv2Wbe',
+            'div.fontBodyMedium',
+            'div[class*="listing"]',
         ];
 
         foreach ($selectors as $selector) {
@@ -181,12 +211,19 @@ class BusinessCrawler extends CrawlObserver
      */
     private function saveBusiness(array $data): void
     {
-        $name = mb_substr((string) ($data['name'] ?? ''), 0, 191);
-        $address = mb_substr((string) ($data['address'] ?? ''), 0, 191);
+        $name = (string) ($data['name'] ?? '');
+        $rawAddress = (string) ($data['address'] ?? '');
 
         if (empty($name)) {
             return;
         }
+
+        // 1. Clean data BEFORE anything else (centralized helper handles phone stripping)
+        $cleaned = BusinessParser::cleanGoogleAddress($rawAddress, $data['phone'] ?? null);
+
+        // 2. Truncate AFTER cleaning to ensure we had the full string for regex matching
+        $name = mb_substr($name, 0, 191);
+        $address = mb_substr($cleaned['address'], 0, 191);
 
         $hash = Business::generateDedupHash($name, $address);
 
@@ -196,39 +233,33 @@ class BusinessCrawler extends CrawlObserver
             'scraping_job_id' => $this->scrapingJob->id,
             'name' => $name,
             'category' => $data['category'] ?? ($business->category ?? null),
-            'address' => $address ?: ($business->address ?? null),
-            'city' => $data['city'] ?: $this->scrapingJob->location,
-            'state' => $data['state'] ?: ($business->state ?? null),
-            'zip' => $data['zip'] ?: ($business->zip ?? null),
-            'country' => $data['country'] ?? ($business->country ?? $this->deriveCountryFromLocation()),
-            'phone' => $data['phone'] ?: ($business->phone ?? null),
+            'address' => $address,
+            'city' => ($data['city'] ?: $cleaned['city']) ?: $this->scrapingJob->location,
+            'state' => ($data['state'] ?: $cleaned['state']) ?: ($business->state ?? null),
+            'zip' => ($data['zip'] ?: $cleaned['zip']) ?: ($business->zip ?? null),
+            'country' => ($data['country'] ?? $cleaned['country']) ?? ($business->country ?? $this->deriveCountryFromLocation()),
+            'phone' => $cleaned['phone'],
             'website' => $data['website'] ?: ($business->website ?? null),
             'rating' => $data['rating'] ?? ($business->rating ?? null),
             'reviews_count' => $data['reviews_count'] ?? ($business->reviews_count ?? null),
+            'latitude' => $data['latitude'] ?? ($business->latitude ?? null),
+            'longitude' => $data['longitude'] ?? ($business->longitude ?? null),
+            'cid' => $data['cid'] ?? ($business->cid ?? null),
             'source' => $this->scrapingJob->source,
             'dedup_hash' => $hash,
         ];
 
-        // Final cleanup: if phone is in address, strip it
-        $phoneRegex = '/(?:\+?\d{1,4}[\s.-]?)?(?:\(?\d{1,5}\)?[\s.-]?)?\d{2,4}[\s.-]?\d{3,4}[\s.-]?\d{3,4}/';
-
-        // 1. If we have a phone, try to strip it directly
-        if (! empty($updateData['phone']) && ! empty($updateData['address'])) {
-            $phone = $updateData['phone'];
-            if (str_contains($updateData['address'], $phone)) {
-                $updateData['address'] = trim(str_replace($phone, '', $updateData['address']), " \t\n\r\0\x0B,-·");
-            }
+        if (empty($updateData['city'])) {
+            $updateData['city'] = $cleaned['city'];
         }
-
-        // 2. Also run regex on address to catch any other embedded phones
-        if (! empty($updateData['address'])) {
-            if (preg_match($phoneRegex, $updateData['address'], $matches)) {
-                $foundPhone = $matches[0];
-                if (empty($updateData['phone'])) {
-                    $updateData['phone'] = trim($foundPhone);
-                }
-                $updateData['address'] = trim(str_replace($foundPhone, '', $updateData['address']), " \t\n\r\0\x0B,-·");
-            }
+        if (empty($updateData['state'])) {
+            $updateData['state'] = $cleaned['state'];
+        }
+        if (empty($updateData['zip'])) {
+            $updateData['zip'] = $cleaned['zip'];
+        }
+        if (empty($updateData['country'])) {
+            $updateData['country'] = $cleaned['country'] ?? $this->deriveCountryFromLocation();
         }
 
         if ($business) {
@@ -250,26 +281,44 @@ class BusinessCrawler extends CrawlObserver
      */
     private function deriveCountryFromLocation(): ?string
     {
-        $location = $this->scrapingJob->location;
+        $location = trim($this->scrapingJob->location);
 
         if (empty($location)) {
             return null;
         }
 
-        // Common mapping for known locations
+        // Standardized mapping for known locations/countries
         $mappings = [
             'Dubai' => 'United Arab Emirates',
+            'Abu Dhabi' => 'United Arab Emirates',
             'UAE' => 'United Arab Emirates',
             'India' => 'India',
+            'Surat' => 'India',
+            'Mumbai' => 'India',
+            'Delhi' => 'India',
+            'Bangalore' => 'India',
+            'Pune' => 'India',
+            'Ahmedabad' => 'India',
             'USA' => 'United States',
+            'United States' => 'United States',
             'UK' => 'United Kingdom',
+            'United Kingdom' => 'United Kingdom',
             'London' => 'United Kingdom',
             'Tokyo' => 'Japan',
             'Japan' => 'Japan',
+            'Paris' => 'France',
+            'France' => 'France',
+            'Berlin' => 'Germany',
+            'Germany' => 'Germany',
+            'Canada' => 'Canada',
+            'Toronto' => 'Canada',
+            'Australia' => 'Australia',
+            'Sydney' => 'Australia',
+            'Singapore' => 'Singapore',
         ];
 
         foreach ($mappings as $key => $country) {
-            if (str_contains(strtolower($location), strtolower($key))) {
+            if (stripos($location, $key) !== false) {
                 return $country;
             }
         }
@@ -277,9 +326,13 @@ class BusinessCrawler extends CrawlObserver
         // If location contains a comma, the last part might be the country
         $parts = array_map('trim', explode(',', $location));
         if (count($parts) > 1) {
-            return end($parts);
+            $lastPart = end($parts);
+            // Basic validation: country names usually don't have numbers
+            if (! preg_match('/\d/', $lastPart) && strlen($lastPart) > 2) {
+                return $lastPart;
+            }
         }
 
-        return null;
+        return $location; // Fallback to the location itself if nothing else matches
     }
 }
