@@ -44,23 +44,11 @@
                                     <label class="text-sm font-semibold text-slate-700 dark:text-slate-300">Search Limit (Records)</label>
                                     <div class="relative">
                                         <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">list_alt</span>
-                                        <input wire:model="limit" class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all" min="50" step="50" type="number" required/>
+                                        <input wire:model="limit" class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all" min="1" step="1" type="number" required/>
                                     </div>
                                     @error('limit') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                                 </div>
 
-                                <!-- Source -->
-                                <div class="flex flex-col gap-2">
-                                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-300">Source</label>
-                                    <div class="relative">
-                                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">public</span>
-                                        <select wire:model="source" class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all">
-                                            <option value="yellowpages">Built-in (Google/YellowPages)</option>
-                                            <option value="apify">Apify Actor</option>
-                                        </select>
-                                    </div>
-                                    @error('source') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
-                                </div>
                             </div>
                             <!-- Action Buttons -->
                             <div class="flex flex-col sm:flex-row gap-4 pt-4">

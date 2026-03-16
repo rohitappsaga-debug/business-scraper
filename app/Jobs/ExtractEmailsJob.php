@@ -20,12 +20,13 @@ class ExtractEmailsJob implements ShouldQueue
 
     public int $timeout = 60;
 
-    public int $tries = 3;
+    public int $tries = 1;
 
     public function __construct(public readonly int $businessId) {}
 
     public function handle(): void
     {
+        set_time_limit(0);
         $business = Business::find($this->businessId);
 
         if (! $business) {
@@ -100,19 +101,17 @@ class ExtractEmailsJob implements ShouldQueue
                 'found' => count($emails),
             ]);
         } catch (RequestException $e) {
-            Log::warning('Failed to fetch website for email extraction', [
+            Log::debug('Failed to fetch website for email extraction: '.$e->getMessage(), [
                 'business_id' => $business->id,
                 'website' => $website,
-                'error' => $e->getMessage(),
             ]);
         } catch (\Throwable $e) {
-            Log::warning('ExtractEmailsJob failed', [
+            Log::warning('ExtractEmailsJob failed: '.$e->getMessage(), [
                 'business_id' => $business->id,
                 'website' => $website ?? null,
                 'exception' => $e::class,
-                'message' => $e->getMessage(),
             ]);
-            throw $e;
+            // We don't rethrow here to avoid clogging the failed_jobs table with common network issues
         }
     }
 

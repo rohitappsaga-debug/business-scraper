@@ -43,17 +43,44 @@ class EmailParser
             return false;
         }
 
-        $blocklist = [
+        $email = strtolower($email);
+        $parts = explode('@', $email);
+        if (count($parts) !== 2) {
+            return false;
+        }
+
+        [$local, $domain] = $parts;
+
+        // 1. Domain Blocklist (matching common placeholders and noise)
+        $domainBlocklist = [
             'example.com', 'test.com', 'domain.com', 'email.com',
             'yoursite.com', 'youremail.com', 'sentry.io',
+            'company.com', 'sample.com', 'placeholder.com',
+            'sitename.com', 'website.com', 'yourdomain.com',
         ];
 
-        $domain = strtolower(substr($email, strpos($email, '@') + 1));
-
-        foreach ($blocklist as $blocked) {
+        foreach ($domainBlocklist as $blocked) {
             if (str_contains($domain, $blocked)) {
                 return false;
             }
+        }
+
+        // 2. Local Part Blocklist (matching generic placeholders)
+        $localBlocklist = [
+            'you', 'test', 'placeholder', 'example', 'sample', 'user',
+            'name', 'email', 'info@template', 'support@template',
+        ];
+
+        foreach ($localBlocklist as $blockedLocal) {
+            // Check for exact match or starting with placeholder if it's a generic local part
+            if ($local === $blockedLocal || ($local === 'you' && $domain === 'company.com')) {
+                return false;
+            }
+        }
+
+        // 3. Length sanity check
+        if (strlen($local) < 2) {
+            return false;
         }
 
         return true;

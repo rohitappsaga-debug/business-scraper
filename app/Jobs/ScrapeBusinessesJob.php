@@ -3,7 +3,6 @@
 namespace App\Jobs;
 
 use App\Models\ScrapingJob;
-use App\Scrapers\CrawlerFactory;
 use App\Scrapers\Runners\ApifyRunner;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -31,14 +30,9 @@ class ScrapeBusinessesJob implements ShouldQueue
 
         $this->scrapingJob->markAsRunning();
 
-        if ($this->scrapingJob->source === 'apify') {
-            /** @var ApifyRunner $runner */
-            $runner = app(ApifyRunner::class);
-            $savedCount = $runner->run($this->scrapingJob);
-        } else {
-            $observer = CrawlerFactory::crawl($this->scrapingJob);
-            $savedCount = $observer->getSavedCount();
-        }
+        /** @var ApifyRunner $runner */
+        $runner = app(ApifyRunner::class);
+        $savedCount = $runner->run($this->scrapingJob);
 
         $this->scrapingJob->markAsCompleted($savedCount);
 

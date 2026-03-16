@@ -17,6 +17,7 @@ class ApifyRunner
 
     public function run(ScrapingJob $job): int
     {
+        set_time_limit(0);
         $actorId = (string) (config('apify.actor_id') ?? config('services.apify.actor_id') ?? '');
         if ($actorId === '') {
             $actorId = 'compass~crawler-google-places';

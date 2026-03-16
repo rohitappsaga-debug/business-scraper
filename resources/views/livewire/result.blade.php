@@ -1,4 +1,4 @@
-<div>
+<div wire:poll.5s>
 <div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100">
 <div class="layout-container flex h-full grow flex-col">
 <main class="flex flex-1 justify-center py-8 px-6 lg:px-20">
