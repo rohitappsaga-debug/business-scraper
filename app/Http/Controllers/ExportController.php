@@ -42,11 +42,19 @@ class ExportController extends Controller
      */
     private function resolveFilters(Request $request): array
     {
+        $jobId = $request->query('job_id');
+        if ($jobId !== null && $jobId !== '') {
+            $jobId = (int) $jobId;
+        } else {
+            $jobId = null;
+        }
+
         return array_filter([
+            'job_id' => $jobId,
             'location' => $request->query('location'),
             'category' => $request->query('category'),
             'min_rating' => $request->query('min_rating'),
             'has_email' => $request->boolean('has_email') ? true : null,
-        ]);
+        ], fn ($value) => $value !== null && $value !== '');
     }
 }

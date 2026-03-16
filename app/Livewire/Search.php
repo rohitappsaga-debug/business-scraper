@@ -15,25 +15,28 @@ class Search extends Component
 
     public int $limit = 100;
 
+    public string $source = 'yellowpages';
+
     public function submit(): void
     {
         $this->validate([
             'keyword' => 'required|string|max:255',
             'location' => 'required|string|max:255',
             'limit' => 'required|integer|min:10',
+            'source' => 'required|string|in:yellowpages,apify',
         ]);
 
         $scrapingJob = ScrapingJob::create([
             'keyword' => $this->keyword,
             'location' => $this->location,
             'radius' => 25,
-            'source' => 'yellowpages',
+            'source' => $this->source,
             'status' => 'pending',
         ]);
 
         ScrapeBusinessesJob::dispatch($scrapingJob)->onQueue('default');
 
-        $this->redirectRoute('result', ['job_id' => $scrapingJob->id]);
+        $this->redirectRoute('result');
     }
 
     public function render(): View

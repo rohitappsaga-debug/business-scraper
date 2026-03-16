@@ -18,6 +18,7 @@ class ScrapingJob extends Model
         'source',
         'status',
         'results_count',
+        'error_message',
     ];
 
     public function casts(): array
@@ -46,8 +47,19 @@ class ScrapingJob extends Model
         ]);
     }
 
-    public function markAsFailed(): void
+    public function markAsFailed(?string $errorMessage = null): void
     {
-        $this->update(['status' => 'failed']);
+        $this->update([
+            'status' => 'failed',
+            'error_message' => $errorMessage !== null && $errorMessage !== '' ? mb_substr($errorMessage, 0, 1000) : null,
+        ]);
+    }
+
+    public function markForRerun(): void
+    {
+        $this->update([
+            'status' => 'pending',
+            'error_message' => null,
+        ]);
     }
 }

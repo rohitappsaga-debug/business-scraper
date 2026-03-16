@@ -22,11 +22,19 @@ class ExtractEmailsJob implements ShouldQueue
 
     public int $tries = 3;
 
-    public function __construct(public readonly Business $business) {}
+    public function __construct(public readonly int $businessId) {}
 
     public function handle(): void
     {
-        $website = $this->business->website;
+        $business = Business::find($this->businessId);
+
+        if (! $business) {
+            Log::debug('ExtractEmailsJob skipped: business no longer exists', ['business_id' => $this->businessId]);
+
+            return;
+        }
+
+        $website = $business->website;
 
         if (empty($website)) {
             return;
@@ -75,7 +83,7 @@ class ExtractEmailsJob implements ShouldQueue
             foreach ($emails as $email) {
                 BusinessEmail::firstOrCreate(
                     [
-                        'business_id' => $this->business->id,
+                        'business_id' => $business->id,
                         'email' => $email,
                     ],
                     ['verified' => false]
@@ -83,20 +91,28 @@ class ExtractEmailsJob implements ShouldQueue
             }
 
             // Set the primary email on the business if none is set
-            if (empty($this->business->email) && ! empty($emails)) {
-                $this->business->update(['email' => $emails[0]]);
+            if (empty($business->email) && ! empty($emails)) {
+                $business->update(['email' => $emails[0]]);
             }
 
             Log::info('Emails extracted', [
-                'business_id' => $this->business->id,
+                'business_id' => $business->id,
                 'found' => count($emails),
             ]);
         } catch (RequestException $e) {
             Log::warning('Failed to fetch website for email extraction', [
-                'business_id' => $this->business->id,
+                'business_id' => $business->id,
                 'website' => $website,
                 'error' => $e->getMessage(),
             ]);
+        } catch (\Throwable $e) {
+            Log::warning('ExtractEmailsJob failed', [
+                'business_id' => $business->id,
+                'website' => $website ?? null,
+                'exception' => $e::class,
+                'message' => $e->getMessage(),
+            ]);
+            throw $e;
         }
     }
 

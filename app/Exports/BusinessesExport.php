@@ -20,6 +20,10 @@ class BusinessesExport implements FromQuery, WithHeadings, WithMapping
     {
         $query = Business::query()->with('businessEmails');
 
+        if (! empty($this->filters['job_id'])) {
+            $query->where('scraping_job_id', (int) $this->filters['job_id']);
+        }
+
         if (! empty($this->filters['location'])) {
             $query->where(function (Builder $q) {
                 $q->where('city', 'like', '%'.$this->filters['location'].'%')

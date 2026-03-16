@@ -1,24 +1,15 @@
 <div>
 <div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100">
 <div class="layout-container flex h-full grow flex-col">
-<!-- Top Navigation Bar -->
 <main class="flex flex-1 justify-center py-8 px-6 lg:px-20">
 <div class="layout-content-container flex flex-col w-full max-w-[1280px] gap-6">
     <!-- Page Title & Actions -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div class="flex flex-col gap-1">
-            <h1 class="text-slate-900 dark:text-white text-3xl font-black leading-tight tracking-[-0.033em]">Scraping Results</h1>
-            <p class="text-slate-500 dark:text-slate-400 text-base font-normal">Manage and export your extracted business leads.</p>
+            <h1 class="text-slate-900 dark:text-white text-3xl font-black leading-tight tracking-[-0.033em]">Scraping Jobs</h1>
+            <p class="text-slate-500 dark:text-slate-400 text-base font-normal">View and manage your scraping jobs. Click a job to see its results.</p>
         </div>
         <div class="flex flex-wrap items-center gap-3">
-            <button wire:click="exportCsv" class="flex items-center justify-center rounded-lg h-10 px-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">
-                <span class="material-symbols-outlined text-sm mr-2">description</span>
-                Export CSV
-            </button>
-            <button wire:click="exportExcel" class="flex items-center justify-center rounded-lg h-10 px-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">
-                <span class="material-symbols-outlined text-sm mr-2">table_chart</span>
-                Export Excel
-            </button>
             <a href="{{ route('search') }}" class="flex items-center justify-center rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold hover:opacity-90 transition-all shadow-sm">
                 <span class="material-symbols-outlined text-sm mr-2">add</span>
                 Start New Search
@@ -26,144 +17,95 @@
         </div>
     </div>
 
-    <!-- Summary Bar Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="flex flex-col gap-1 rounded-xl p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-            <p class="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">Keyword</p>
-            <p class="text-slate-900 dark:text-white text-xl font-bold">{{ $keyword }}</p>
+    @if (session('message'))
+        <div class="rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/30 px-4 py-3 text-emerald-800 dark:text-emerald-200 text-sm">
+            {{ session('message') }}
         </div>
-        <div class="flex flex-col gap-1 rounded-xl p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-            <p class="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">Location</p>
-            <p class="text-slate-900 dark:text-white text-xl font-bold">{{ $location }}</p>
-        </div>
-        <div class="flex flex-col gap-1 rounded-xl p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-            <p class="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">Results Found</p>
-            <p class="text-slate-900 dark:text-white text-xl font-bold">{{ $totalResults }}</p>
-        </div>
-        <div class="flex flex-col gap-1 rounded-xl p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-            <p class="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">Status</p>
-            <div class="flex items-center gap-2">
-                @php
-                    $status = $scrapingJob['status'] ?? 'pending';
-                    $statusColor = match($status) {
-                        'completed' => 'text-emerald-600 dark:text-emerald-400',
-                        'failed' => 'text-red-600 dark:text-red-400',
-                        'running' => 'text-blue-600 dark:text-blue-400',
-                        default => 'text-slate-600 dark:text-slate-400',
-                    };
-                    $icon = match($status) {
-                        'completed' => 'check',
-                        'failed' => 'close',
-                        'running' => 'sync',
-                        default => 'more_horiz',
-                    };
-                    $iconBg = match($status) {
-                        'completed' => 'bg-emerald-100 dark:bg-emerald-900/30',
-                        'failed' => 'bg-red-100 dark:bg-red-900/30',
-                        'running' => 'bg-blue-100 dark:bg-blue-900/30',
-                        default => 'bg-slate-100 dark:bg-slate-900/30',
-                    };
-                @endphp
-                <span class="{{ $statusColor }} text-xl font-bold">{{ ucfirst($status) }}</span>
-                <span class="flex size-5 items-center justify-center rounded-full {{ $iconBg }} {{ $statusColor }}">
-                    <span class="material-symbols-outlined text-xs font-bold {{ $status === 'running' ? 'animate-spin' : '' }}">{{ $icon }}</span>
-                </span>
-            </div>
-        </div>
-    </div>
+    @endif
 
-    <!-- Results Table Section -->
+    <!-- Jobs Table -->
     <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col">
-        <!-- Table Filter -->
-        <div class="p-4 border-b border-slate-100 dark:border-slate-800">
-            <label class="flex flex-col min-w-40 h-10 w-full md:max-w-md">
-                <div class="flex w-full flex-1 items-stretch rounded-lg h-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                    <div class="text-slate-500 dark:text-slate-400 flex items-center justify-center pl-3">
-                        <span class="material-symbols-outlined text-lg">search</span>
-                    </div>
-                    <input wire:model.live="search" class="form-input flex w-full min-w-0 flex-1 border-none bg-transparent focus:outline-0 focus:ring-0 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 px-3 text-sm font-normal" placeholder="Filter results by name, email or category..."/>
-                </div>
-            </label>
-        </div>
-        <!-- Table Container -->
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
                     <tr class="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
-                        <th class="px-4 py-3 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider">Business Name</th>
-                        <th class="px-4 py-3 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider">Category</th>
-                        <th class="px-4 py-3 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider">Address</th>
-                        <th class="px-4 py-3 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider">Phone</th>
-                        <th class="px-4 py-3 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider">Email</th>
-                        <th class="px-4 py-3 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider">Website</th>
+                        <th class="px-4 py-3 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider">Job #</th>
+                        <th class="px-4 py-3 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider">Keyword</th>
+                        <th class="px-4 py-3 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider">Location</th>
+                        <th class="px-4 py-3 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider">Source</th>
+                        <th class="px-4 py-3 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider">Status</th>
+                        <th class="px-4 py-3 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider">Results</th>
+                        <th class="px-4 py-3 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider">Created</th>
                         <th class="px-4 py-3 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider text-center">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-                    @forelse ($results as $result)
+                    @forelse ($jobs as $job)
+                        @php
+                            $status = $job->status;
+                            $statusColor = match($status) {
+                                'completed' => 'text-emerald-600 dark:text-emerald-400',
+                                'failed' => 'text-red-600 dark:text-red-400',
+                                'running' => 'text-blue-600 dark:text-blue-400',
+                                default => 'text-slate-600 dark:text-slate-400',
+                            };
+                            $iconBg = match($status) {
+                                'completed' => 'bg-emerald-100 dark:bg-emerald-900/30',
+                                'failed' => 'bg-red-100 dark:bg-red-900/30',
+                                'running' => 'bg-blue-100 dark:bg-blue-900/30',
+                                default => 'bg-slate-100 dark:bg-slate-900/30',
+                            };
+                        @endphp
                         <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                            <td class="px-4 py-4 text-slate-900 dark:text-white font-medium text-sm">{{ $result['name'] }}</td>
-                            <td class="px-4 py-4 text-slate-600 dark:text-slate-400 text-sm">{{ $result['category'] }}</td>
-                            <td class="px-4 py-4 text-slate-600 dark:text-slate-400 text-sm">{{ $result['address'] }}</td>
-                            <td class="px-4 py-4 text-slate-600 dark:text-slate-400 text-sm">{{ $result['phone'] }}</td>
-                            <td class="px-4 py-4 text-sm">
-                                @if ($result['email'])
-                                    <a href="mailto:{{ $result['email'] }}" class="text-primary font-medium underline decoration-primary/30">{{ $result['email'] }}</a>
-                                @else
-                                    <span class="text-slate-400 dark:text-slate-600 italic">Not Found</span>
-                                @endif
-                            </td>
-                            <td class="px-4 py-4 text-sm">
-                                @if ($result['website'])
-                                    <a href="{{ $result['website'] }}" target="_blank" class="text-primary font-medium underline decoration-primary/30">{{ $result['website'] }}</a>
-                                @else
-                                    <span class="text-slate-400 dark:text-slate-600 italic">Not Found</span>
-                                @endif
-                            </td>
+                            <td class="px-4 py-4 text-slate-900 dark:text-white font-bold text-sm">{{ $job->id }}</td>
+                            <td class="px-4 py-4 text-slate-900 dark:text-white font-medium text-sm">{{ $job->keyword }}</td>
+                            <td class="px-4 py-4 text-slate-600 dark:text-slate-400 text-sm">{{ $job->location }}</td>
+                            <td class="px-4 py-4 text-slate-600 dark:text-slate-400 text-sm">{{ ucfirst($job->source ?? '—') }}</td>
                             <td class="px-4 py-4">
-                                <div class="flex items-center justify-center gap-2">
-                                    <button wire:click="viewDetails({{ $result['id'] }})" class="flex items-center justify-center gap-2 px-4 py-1.5 rounded-lg bg-primary text-white text-sm font-semibold hover:opacity-90 transition-all shadow-sm" title="View Details">
+                                <span class="flex items-center gap-1.5 w-fit rounded-full px-2.5 py-0.5 {{ $iconBg }} {{ $statusColor }} text-xs font-semibold">
+                                    @if ($status === 'running')
+                                        <span class="material-symbols-outlined text-xs animate-spin">sync</span>
+                                    @endif
+                                    {{ ucfirst($status) }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-4 text-slate-600 dark:text-slate-400 text-sm">{{ $job->results_count ?? 0 }}</td>
+                            <td class="px-4 py-4 text-slate-600 dark:text-slate-400 text-sm">{{ $job->created_at?->format('M j, Y g:i A') }}</td>
+                            <td class="px-4 py-4">
+                                <div class="flex items-center justify-center gap-2 flex-wrap">
+                                    <a href="{{ route('result.job', ['id' => $job->id]) }}" class="flex items-center justify-center gap-2 px-4 py-1.5 rounded-lg bg-primary text-white text-sm font-semibold hover:opacity-90 transition-all shadow-sm" title="View results">
                                         <span class="material-symbols-outlined text-[18px]">visibility</span>
-                                        <span>View</span>
+                                        <span>View results</span>
+                                    </a>
+                                    <button type="button" wire:click="rerunJob({{ $job->id }})" wire:loading.attr="disabled" class="flex items-center justify-center gap-2 px-4 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all" title="Rerun job">
+                                        <span class="material-symbols-outlined text-[18px]" wire:loading.remove wire:target="rerunJob">replay</span>
+                                        <span class="material-symbols-outlined text-[18px] animate-spin" wire:loading wire:target="rerunJob">sync</span>
+                                        <span>Rerun</span>
                                     </button>
                                 </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="px-4 py-10 text-center text-slate-400 dark:text-slate-600 text-sm">No results found.</td>
+                            <td colspan="8" class="px-4 py-10 text-center text-slate-400 dark:text-slate-600 text-sm">No jobs yet. <a href="{{ route('search') }}" class="text-primary font-semibold hover:underline">Start a new search</a>.</td>
                         </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
-        <!-- Pagination -->
-        <div class="flex items-center justify-between p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
-            <p class="text-slate-500 dark:text-slate-400 text-sm">
-                Showing {{ ($currentPage - 1) * $perPage + 1 }} to {{ min($currentPage * $perPage, $totalResults) }} of {{ $totalResults }} leads
-            </p>
-            <div class="flex gap-1">
-                <button wire:click="previousPage" @disabled($currentPage === 1) class="size-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-                    <span class="material-symbols-outlined text-sm">chevron_left</span>
-                </button>
-                @for ($i = 1; $i <= $totalPages; $i++)
-                    @if ($i === 1 || $i === $totalPages || abs($i - $currentPage) <= 1)
-                        <button wire:click="goToPage({{ $i }})" class="size-8 flex items-center justify-center rounded-lg border text-sm font-bold transition-colors {{ $currentPage === $i ? 'border-primary bg-primary text-white' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700' }}">
-                            {{ $i }}
-                        </button>
-                    @elseif (abs($i - $currentPage) === 2)
-                        <span class="px-1 py-1 text-slate-400 dark:text-slate-600">...</span>
-                    @endif
-                @endfor
-                <button wire:click="nextPage" @disabled($currentPage === $totalPages) class="size-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-                    <span class="material-symbols-outlined text-sm">chevron_right</span>
-                </button>
+        @if ($jobs->hasPages())
+            <div class="flex items-center justify-between p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
+                <p class="text-slate-500 dark:text-slate-400 text-sm">
+                    Showing {{ $jobs->firstItem() }} to {{ $jobs->lastItem() }} of {{ $jobs->total() }} jobs
+                </p>
+                <div>
+                    {{ $jobs->withQueryString()->links() }}
+                </div>
             </div>
-        </div>
+        @endif
     </div>
 </div>
 </main>
-<!-- Footer -->
 <footer class="mt-auto py-8 px-20 border-t border-slate-200 dark:border-slate-800 text-center text-slate-400 dark:text-slate-600 text-xs">
     &copy; 2024 LeadScraper Pro. All rights reserved. | <a class="hover:text-primary transition-colors" href="#">Privacy Policy</a> | <a class="hover:text-primary transition-colors" href="#">Terms of Service</a>
 </footer>

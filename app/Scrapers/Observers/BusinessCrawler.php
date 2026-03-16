@@ -272,7 +272,7 @@ class BusinessCrawler extends CrawlObserver
 
         // Trigger email extraction if website exists and we haven't found emails yet
         if (! empty($business->website) && $business->businessEmails()->count() === 0) {
-            ExtractEmailsJob::dispatch($business)->onQueue('default');
+            ExtractEmailsJob::dispatch($business->id)->onQueue('default');
         }
     }
 

@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\ScrapingJob;
 use App\Scrapers\CrawlerFactory;
+use App\Scrapers\Runners\ApifyRunner;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
@@ -25,12 +26,19 @@ class ScrapeBusinessesJob implements ShouldQueue
             'job_id' => $this->scrapingJob->id,
             'keyword' => $this->scrapingJob->keyword,
             'location' => $this->scrapingJob->location,
+            'source' => $this->scrapingJob->source,
         ]);
 
         $this->scrapingJob->markAsRunning();
 
-        $observer = CrawlerFactory::crawl($this->scrapingJob);
-        $savedCount = $observer->getSavedCount();
+        if ($this->scrapingJob->source === 'apify') {
+            /** @var ApifyRunner $runner */
+            $runner = app(ApifyRunner::class);
+            $savedCount = $runner->run($this->scrapingJob);
+        } else {
+            $observer = CrawlerFactory::crawl($this->scrapingJob);
+            $savedCount = $observer->getSavedCount();
+        }
 
         $this->scrapingJob->markAsCompleted($savedCount);
 
@@ -47,6 +55,6 @@ class ScrapeBusinessesJob implements ShouldQueue
             'error' => $exception->getMessage(),
         ]);
 
-        $this->scrapingJob->markAsFailed();
+        $this->scrapingJob->markAsFailed($exception->getMessage());
     }
 }

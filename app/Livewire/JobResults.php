@@ -1,0 +1,150 @@
+<?php
+
+namespace App\Livewire;
+
+use App\Jobs\ScrapeBusinessesJob;
+use App\Models\Business;
+use App\Models\ScrapingJob;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\View\View;
+use Livewire\Component;
+
+class JobResults extends Component
+{
+    public int $id = 0;
+
+    public string $search = '';
+
+    public int $currentPage = 1;
+
+    public int $perPage = 5;
+
+    public ?ScrapingJob $job = null;
+
+    public function mount(int $id): void
+    {
+        $this->id = $id;
+        $this->job = ScrapingJob::find($id);
+
+        if (! $this->job) {
+            $this->redirectRoute('result');
+
+            return;
+        }
+    }
+
+    public function getTotalResultsProperty(): int
+    {
+        return $this->buildQuery()->count();
+    }
+
+    public function getTotalPagesProperty(): int
+    {
+        return max(1, (int) ceil($this->totalResults / $this->perPage));
+    }
+
+    /** @return Collection<int, Business> */
+    public function getResultsProperty(): Collection
+    {
+        if (! $this->job) {
+            return collect();
+        }
+
+        return $this->buildQuery()
+            ->with('businessEmails')
+            ->skip(($this->currentPage - 1) * $this->perPage)
+            ->take($this->perPage)
+            ->get();
+    }
+
+    public function updatedSearch(): void
+    {
+        $this->currentPage = 1;
+    }
+
+    public function previousPage(): void
+    {
+        if ($this->currentPage > 1) {
+            $this->currentPage--;
+        }
+    }
+
+    public function nextPage(): void
+    {
+        if ($this->currentPage < $this->totalPages) {
+            $this->currentPage++;
+        }
+    }
+
+    public function goToPage(int $page): void
+    {
+        $this->currentPage = max(1, min($page, $this->totalPages));
+    }
+
+    public function viewDetails(int $businessId): void
+    {
+        $this->redirectRoute('detail-result', ['id' => $businessId]);
+    }
+
+    public function exportCsv(): void
+    {
+        $this->redirectRoute('export.csv', $this->exportFilters());
+    }
+
+    public function exportExcel(): void
+    {
+        $this->redirectRoute('export.excel', $this->exportFilters());
+    }
+
+    public function rerun(): void
+    {
+        if (! $this->job) {
+            $this->redirectRoute('result');
+
+            return;
+        }
+
+        $this->job->markForRerun();
+        ScrapeBusinessesJob::dispatch($this->job)->onQueue('default');
+
+        session()->flash('message', 'Job #'.$this->job->id.' has been queued to run again.');
+        $this->redirectRoute('result');
+    }
+
+    public function render(): View
+    {
+        return view('livewire.job-results', [
+            'results' => $this->results,
+            'totalResults' => $this->totalResults,
+            'totalPages' => $this->totalPages,
+            'currentPage' => $this->currentPage,
+            'perPage' => $this->perPage,
+        ])->layout('layouts.app', ['title' => 'Results for Job #'.$this->id]);
+    }
+
+    private function buildQuery(): Builder
+    {
+        $query = Business::query()->where('scraping_job_id', $this->id);
+
+        if (! empty($this->search)) {
+            $term = '%'.$this->search.'%';
+            $query->where(function (Builder $q) use ($term) {
+                $q->where('name', 'like', $term)
+                    ->orWhere('category', 'like', $term)
+                    ->orWhere('email', 'like', $term);
+            });
+        }
+
+        return $query->orderByDesc('created_at');
+    }
+
+    /** @return array<string, mixed> */
+    private function exportFilters(): array
+    {
+        return array_filter([
+            'job_id' => $this->id,
+            'location' => $this->job?->location ?: null,
+        ]);
+    }
+}
