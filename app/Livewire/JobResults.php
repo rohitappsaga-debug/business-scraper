@@ -144,7 +144,7 @@ class JobResults extends Component
     {
         return array_filter([
             'job_id' => $this->id,
-            'location' => $this->job?->location ?: null,
+            'search' => $this->search ?: null,
         ]);
     }
 }

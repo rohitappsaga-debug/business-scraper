@@ -53,6 +53,7 @@ class ExportController extends Controller
             'job_id' => $jobId,
             'location' => $request->query('location'),
             'category' => $request->query('category'),
+            'search' => $request->query('search'),
             'min_rating' => $request->query('min_rating'),
             'has_email' => $request->boolean('has_email') ? true : null,
         ], fn ($value) => $value !== null && $value !== '');

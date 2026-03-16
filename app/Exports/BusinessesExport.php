@@ -27,12 +27,22 @@ class BusinessesExport implements FromQuery, WithHeadings, WithMapping
         if (! empty($this->filters['location'])) {
             $query->where(function (Builder $q) {
                 $q->where('city', 'like', '%'.$this->filters['location'].'%')
-                    ->orWhere('state', 'like', '%'.$this->filters['location'].'%');
+                    ->orWhere('state', 'like', '%'.$this->filters['location'].'%')
+                    ->orWhere('country', 'like', '%'.$this->filters['location'].'%');
             });
         }
 
         if (! empty($this->filters['category'])) {
             $query->where('category', 'like', '%'.$this->filters['category'].'%');
+        }
+
+        if (! empty($this->filters['search'])) {
+            $term = '%'.$this->filters['search'].'%';
+            $query->where(function (Builder $q) use ($term) {
+                $q->where('name', 'like', $term)
+                    ->orWhere('category', 'like', $term)
+                    ->orWhere('email', 'like', $term);
+            });
         }
 
         if (! empty($this->filters['min_rating'])) {
