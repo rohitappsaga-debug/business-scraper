@@ -219,8 +219,14 @@
                             </div>
                         </div>
                     </div>
+                    @if(isset($business['id']))
+                        <div class="mt-6">
+                            <livewire:business-email-draft :business="\App\Models\Business::find($business['id'])" />
+                        </div>
+                    @endif
                 </div>
             </div>
+
 
             {{-- Full Width: Additional Details --}}
             <div class="mt-6">

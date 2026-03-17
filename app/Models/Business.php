@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Business extends Model
 {
@@ -52,6 +53,11 @@ class Business extends Model
     public function businessEmails(): HasMany
     {
         return $this->hasMany(BusinessEmail::class);
+    }
+
+    public function collaborationEmailDraft(): HasOne
+    {
+        return $this->hasOne(CollaborationEmailDraft::class);
     }
 
     /**
