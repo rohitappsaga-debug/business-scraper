@@ -1,6 +1,6 @@
 <div>
     @if (session()->has('message'))
-        <div class="max-w-7xl mx-auto w-full px-6 pt-4">
+        <div class="max-w-full mx-auto w-full px-4 md:px-8 pt-4">
             <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 px-4 py-3 rounded-lg text-sm font-medium">
                 {{ session('message') }}
             </div>
@@ -8,14 +8,14 @@
     @endif
 
     @if (empty($business))
-        <main class="max-w-7xl mx-auto w-full px-6 pt-12 pb-8 text-center">
+        <main class="max-w-full mx-auto w-full px-4 md:px-8 pt-12 pb-8 text-center">
             <p class="text-slate-500 dark:text-slate-400">Business lead not found.</p>
             <button wire:click="backToResults" class="mt-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
                 Back to Results
             </button>
         </main>
     @else
-        <main class="max-w-7xl mx-auto w-full px-6 pt-12 pb-8">
+        <main class="max-w-full mx-auto w-full px-4 md:px-8 pt-12 pb-8">
             {{-- Header --}}
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                 <div>
@@ -30,6 +30,10 @@
                     <button wire:click="exportLead" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all flex items-center gap-2">
                         <span class="material-symbols-outlined">download</span>
                         Export Lead
+                    </button>
+                    <button wire:click="generateMasterPrompt" class="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 shadow-sm">
+                        <span class="material-symbols-outlined">smart_toy</span>
+                        Generate Master Prompt
                     </button>
                 </div>
             </div>
@@ -100,6 +104,46 @@
                         </div>
                     </div>
 
+                    {{-- AI Master Prompt Section --}}
+                    @if($generatedPrompt)
+                        <div
+                            x-data="{
+                                copied: false,
+                                copyPrompt() {
+                                    navigator.clipboard.writeText(this.$refs.promptText.value);
+                                    this.copied = true;
+                                    setTimeout(() => this.copied = false, 2000);
+                                }
+                            }"
+                            class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-primary/20 dark:border-primary/30 overflow-hidden"
+                        >
+                            <div class="px-6 py-4 border-b border-primary/10 dark:border-primary/10 flex justify-between items-center bg-primary/5">
+                                <h3 class="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-primary">auto_awesome</span>
+                                    AI Master Prompt
+                                </h3>
+                                <button
+                                    @click="copyPrompt"
+                                    class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+                                    :class="copied ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' : 'bg-primary text-white hover:bg-primary/90'"
+                                >
+                                    <span class="material-symbols-outlined text-[18px]" x-text="copied ? 'check' : 'content_copy'"></span>
+                                    <span x-text="copied ? 'Copied!' : 'Copy Prompt'"></span>
+                                </button>
+                            </div>
+                            <div class="p-6">
+                                <textarea
+                                    x-ref="promptText"
+                                    readonly
+                                    class="w-full h-64 p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-mono text-sm leading-relaxed focus:ring-primary focus:border-primary resize-none"
+                                >{{ $generatedPrompt }}</textarea>
+                                <p class="mt-3 text-xs text-slate-400 italic">
+                                    This prompt is optimized for ChatGPT, Claude, and other AI agents. Copy and paste it to generate personalized growth strategies.
+                                </p>
+                            </div>
+                        </div>
+                    @endif
+
                     {{-- AI Collaboration Email Draft Moved Here --}}
                     @if(isset($business['id']))
                         <livewire:business-email-draft :business="\App\Models\Business::find($business['id'])" />
@@ -162,7 +206,7 @@
                                     @endif
                                 </div>
 
-                                {{-- Website --}}
+                                 {{-- Website --}}
                                 <div class="flex items-center justify-between group">
                                     <div class="flex items-center gap-3">
                                         <div class="size-9 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 group-hover:text-primary transition-colors">
@@ -173,14 +217,16 @@
                                             <p class="text-slate-900 dark:text-white font-semibold truncate max-w-[140px]">{{ $business['website'] ?: 'N/A' }}</p>
                                         </div>
                                     </div>
-                                    @if(!empty($business['website_url']))
+                                    @if(!empty($business['website']))
                                         <a
-                                            href="{{ $business['website_url'] }}"
+                                            href="{{ str_starts_with($business['website'], 'http') ? $business['website'] : 'https://' . $business['website'] }}"
                                             target="_blank"
-                                            class="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
+                                            rel="noopener noreferrer"
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-bold hover:opacity-90 transition-all shadow-sm"
                                             title="Visit Website"
                                         >
-                                            <span class="material-symbols-outlined">open_in_new</span>
+                                            <span>Visit Site</span>
+                                            <span class="material-symbols-outlined text-[16px]">open_in_new</span>
                                         </a>
                                     @endif
                                 </div>

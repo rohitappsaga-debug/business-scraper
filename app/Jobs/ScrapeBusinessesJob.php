@@ -21,6 +21,16 @@ class ScrapeBusinessesJob implements ShouldQueue
 
     public function handle(): void
     {
+        $this->scrapingJob->refresh();
+
+        if ($this->scrapingJob->isCancelled()) {
+            Log::info('Scrape job was cancelled before execution', [
+                'job_id' => $this->scrapingJob->id,
+            ]);
+
+            return;
+        }
+
         Log::info('Starting scrape job', [
             'job_id' => $this->scrapingJob->id,
             'keyword' => $this->scrapingJob->keyword,
@@ -33,6 +43,17 @@ class ScrapeBusinessesJob implements ShouldQueue
         /** @var ApifyRunner $runner */
         $runner = app(ApifyRunner::class);
         $savedCount = $runner->run($this->scrapingJob);
+
+        $this->scrapingJob->refresh();
+
+        if ($this->scrapingJob->isCancelled()) {
+            Log::info('Scrape job was cancelled during execution', [
+                'job_id' => $this->scrapingJob->id,
+                'saved_before_cancel' => $savedCount,
+            ]);
+
+            return;
+        }
 
         $this->scrapingJob->markAsCompleted($savedCount);
 

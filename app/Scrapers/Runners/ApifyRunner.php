@@ -52,6 +52,17 @@ class ApifyRunner
         $limit = 100;
 
         while (true) {
+            $job->refresh();
+
+            if ($job->isCancelled()) {
+                Log::info('Scrape job cancelled during dataset fetch', [
+                    'job_id' => $job->id,
+                    'saved_so_far' => $saved,
+                ]);
+
+                break;
+            }
+
             $page = Apify::getDataset($datasetId, [
                 'limit' => $limit,
                 'offset' => $offset,

@@ -62,4 +62,14 @@ class ScrapingJob extends Model
             'error_message' => null,
         ]);
     }
+
+    public function markAsCancelled(): void
+    {
+        $this->update(['status' => 'cancelled']);
+    }
+
+    public function isCancelled(): bool
+    {
+        return $this->status === 'cancelled';
+    }
 }

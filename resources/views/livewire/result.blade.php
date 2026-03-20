@@ -1,8 +1,8 @@
 <div wire:poll.5s>
 <div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100">
 <div class="layout-container flex h-full grow flex-col">
-<main class="flex flex-1 justify-center py-8 px-6 lg:px-20">
-<div class="layout-content-container flex flex-col w-full max-w-[1280px] gap-6">
+<main class="flex flex-1 justify-center py-8 px-4 md:px-8">
+<div class="layout-content-container flex flex-col w-full gap-6">
     <!-- Page Title & Actions -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div class="flex flex-col gap-1">
@@ -47,12 +47,14 @@
                                 'completed' => 'text-emerald-600 dark:text-emerald-400',
                                 'failed' => 'text-red-600 dark:text-red-400',
                                 'running' => 'text-blue-600 dark:text-blue-400',
+                                'cancelled' => 'text-amber-600 dark:text-amber-400',
                                 default => 'text-slate-600 dark:text-slate-400',
                             };
                             $iconBg = match($status) {
                                 'completed' => 'bg-emerald-100 dark:bg-emerald-900/30',
                                 'failed' => 'bg-red-100 dark:bg-red-900/30',
                                 'running' => 'bg-blue-100 dark:bg-blue-900/30',
+                                'cancelled' => 'bg-amber-100 dark:bg-amber-900/30',
                                 default => 'bg-slate-100 dark:bg-slate-900/30',
                             };
                         @endphp
@@ -77,6 +79,13 @@
                                         <span class="material-symbols-outlined text-[18px]">visibility</span>
                                         <span>View results</span>
                                     </a>
+                                    @if (in_array($status, ['pending', 'running']))
+                                        <button type="button" wire:click="cancelJob({{ $job->id }})" wire:loading.attr="disabled" wire:confirm="Are you sure you want to cancel this job?" class="flex items-center justify-center gap-2 px-4 py-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm font-semibold hover:bg-red-100 dark:hover:bg-red-900/40 transition-all" title="Cancel job">
+                                            <span class="material-symbols-outlined text-[18px]" wire:loading.remove wire:target="cancelJob({{ $job->id }})">cancel</span>
+                                            <span class="material-symbols-outlined text-[18px] animate-spin" wire:loading wire:target="cancelJob({{ $job->id }})">sync</span>
+                                            <span>Cancel</span>
+                                        </button>
+                                    @endif
                                     <button type="button" wire:click="rerunJob({{ $job->id }})" wire:loading.attr="disabled" class="flex items-center justify-center gap-2 px-4 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all" title="Rerun job">
                                         <span class="material-symbols-outlined text-[18px]" wire:loading.remove wire:target="rerunJob">replay</span>
                                         <span class="material-symbols-outlined text-[18px] animate-spin" wire:loading wire:target="rerunJob">sync</span>
@@ -106,7 +115,7 @@
     </div>
 </div>
 </main>
-<footer class="mt-auto py-8 px-20 border-t border-slate-200 dark:border-slate-800 text-center text-slate-400 dark:text-slate-600 text-xs">
+<footer class="mt-auto py-8 px-8 border-t border-slate-200 dark:border-slate-800 text-center text-slate-400 dark:text-slate-600 text-xs">
     &copy; 2024 LeadScraper Pro. All rights reserved. | <a class="hover:text-primary transition-colors" href="#">Privacy Policy</a> | <a class="hover:text-primary transition-colors" href="#">Terms of Service</a>
 </footer>
 </div>

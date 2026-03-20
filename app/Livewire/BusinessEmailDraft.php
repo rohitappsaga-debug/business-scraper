@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Models\Business;
 use App\Models\CollaborationEmailDraft;
 use App\Services\AICollaborationDraftService;
+use App\Utils\EmailFormatter;
 use Exception;
 use Illuminate\View\View;
 use Livewire\Component;
@@ -36,7 +37,7 @@ class BusinessEmailDraft extends Component
         if ($draft) {
             $this->draftId = $draft->id;
             $this->subject = $draft->subject;
-            $this->emailBody = $draft->email_body;
+            $this->emailBody = EmailFormatter::format($draft->email_body);
         } else {
             $this->draftId = null;
             $this->subject = '';
@@ -61,7 +62,7 @@ class BusinessEmailDraft extends Component
                 ['business_id' => $this->business->id],
                 [
                     'subject' => $result['subject'],
-                    'email_body' => $result['email_body'],
+                    'email_body' => EmailFormatter::format($result['email_body']),
                     'generated_by_ai' => true,
                 ]
             );
@@ -71,12 +72,12 @@ class BusinessEmailDraft extends Component
             $this->emailBody = $draft->email_body;
 
             session()->flash('success', 'AI Draft generated successfully!');
-        // } catch (Exception $e) {
-        //     $message = $e->getMessage();
-        //     if (str_contains(strtolower($message), 'rate limit')) {
-        //         $message = 'Gemini AI is temporarily busy. Please wait a few seconds and try again.';
-        //     }
-        //     session()->flash('error', 'Failed to generate draft: '.$message);
+            // } catch (Exception $e) {
+            //     $message = $e->getMessage();
+            //     if (str_contains(strtolower($message), 'rate limit')) {
+            //         $message = 'Gemini AI is temporarily busy. Please wait a few seconds and try again.';
+            //     }
+            //     session()->flash('error', 'Failed to generate draft: '.$message);
         } finally {
             $this->isGenerating = false;
         }

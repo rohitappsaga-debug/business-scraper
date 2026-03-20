@@ -1,8 +1,8 @@
 <div wire:poll.5s>
 <div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100">
 <div class="layout-container flex h-full grow flex-col">
-<main class="flex flex-1 justify-center py-8 px-6 lg:px-20">
-<div class="layout-content-container flex flex-col w-full max-w-[1280px] gap-6">
+<main class="flex flex-1 justify-center py-8 px-4 md:px-8">
+<div class="layout-content-container flex flex-col w-full gap-6">
     <!-- Page Title & Actions -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div class="flex flex-col gap-1">
@@ -141,7 +141,13 @@
                             </td>
                             <td class="px-4 py-4 text-sm">
                                 @if (!empty(trim((string) $result->website)))
-                                    <a href="{{ $result->website }}" target="_blank" rel="noopener noreferrer" class="text-primary font-medium underline decoration-primary/30">{{ $result->website }}</a>
+                                    <a href="{{ str_starts_with($result->website, 'http') ? $result->website : 'https://' . $result->website }}" 
+                                       target="_blank" 
+                                       rel="noopener noreferrer" 
+                                       class="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-bold hover:bg-primary hover:text-white transition-all shadow-sm border border-primary/20">
+                                        <span>Visit Site</span>
+                                        <span class="material-symbols-outlined text-[14px]">open_in_new</span>
+                                    </a>
                                 @else
                                     <span class="text-slate-400 dark:text-slate-600 italic">—</span>
                                 @endif
@@ -188,7 +194,7 @@
     </div>
 </div>
 </main>
-<footer class="mt-auto py-8 px-20 border-t border-slate-200 dark:border-slate-800 text-center text-slate-400 dark:text-slate-600 text-xs">
+<footer class="mt-auto py-8 px-8 border-t border-slate-200 dark:border-slate-800 text-center text-slate-400 dark:text-slate-600 text-xs">
     &copy; 2024 LeadScraper Pro. All rights reserved. | <a class="hover:text-primary transition-colors" href="#">Privacy Policy</a> | <a class="hover:text-primary transition-colors" href="#">Terms of Service</a>
 </footer>
 </div>
