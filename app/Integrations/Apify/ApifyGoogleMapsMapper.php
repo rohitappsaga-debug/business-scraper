@@ -85,6 +85,13 @@ class ApifyGoogleMapsMapper
             'googleId',
         ]);
 
+        $facebook = $this->firstNonEmptyString($item, ['facebookUrl', 'facebook']);
+        $instagram = $this->firstNonEmptyString($item, ['instagramUrl', 'instagram']);
+        $twitter = $this->firstNonEmptyString($item, ['twitterUrl', 'twitter', 'xUrl', 'x']);
+        $linkedin = $this->firstNonEmptyString($item, ['linkedinUrl', 'linkedin']);
+        $youtube = $this->firstNonEmptyString($item, ['youtubeUrl', 'youtube']);
+        $tiktok = $this->firstNonEmptyString($item, ['tiktokUrl', 'tiktok']);
+
         return [
             'name' => $name,
             'category' => $category,
@@ -97,6 +104,14 @@ class ApifyGoogleMapsMapper
             'latitude' => $lat,
             'longitude' => $lng,
             'cid' => $cid,
+            'social' => array_filter([
+                'facebook' => $facebook,
+                'instagram' => $instagram,
+                'twitter' => $twitter,
+                'linkedin' => $linkedin,
+                'youtube' => $youtube,
+                'tiktok' => $tiktok,
+            ]),
         ];
     }
 

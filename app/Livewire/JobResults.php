@@ -52,7 +52,7 @@ class JobResults extends Component
         }
 
         return $this->buildQuery()
-            ->with('businessEmails')
+            ->with(['businessEmails', 'socialLinks'])
             ->skip(($this->currentPage - 1) * $this->perPage)
             ->take($this->perPage)
             ->get();

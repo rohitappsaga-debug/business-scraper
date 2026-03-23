@@ -60,6 +60,11 @@ class Business extends Model
         return $this->hasOne(CollaborationEmailDraft::class);
     }
 
+    public function socialLinks(): HasMany
+    {
+        return $this->hasMany(SocialLink::class);
+    }
+
     /**
      * Generate a deduplication hash from name and address.
      */

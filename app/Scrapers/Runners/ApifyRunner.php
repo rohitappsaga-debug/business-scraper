@@ -6,8 +6,10 @@ use Apify\Laravel\ApifyException;
 use Apify\Laravel\Facades\Apify;
 use App\Integrations\Apify\ApifyGoogleMapsMapper;
 use App\Jobs\ExtractEmailsJob;
+use App\Jobs\FetchSocialMediaLinksJob;
 use App\Models\Business;
 use App\Models\ScrapingJob;
+use App\Models\SocialLink;
 use App\Scrapers\Parsers\BusinessParser;
 use Illuminate\Support\Facades\Log;
 
@@ -109,11 +111,11 @@ class ApifyRunner
             'scrapePlaceDetailPage' => false,
             'scrapeReviewsPersonalData' => true,
             'scrapeSocialMediaProfiles' => [
-                'facebooks' => false,
-                'instagrams' => false,
-                'tiktoks' => false,
-                'twitters' => false,
-                'youtubes' => false,
+                'facebooks' => true,
+                'instagrams' => true,
+                'tiktoks' => true,
+                'twitters' => true,
+                'youtubes' => true,
             ],
             'scrapeTableReservationProvider' => false,
             'searchStringsArray' => [trim($job->keyword)],
@@ -213,8 +215,31 @@ class ApifyRunner
             $business = Business::create($updateData);
         }
 
-        if (! empty($business->website) && $business->businessEmails()->count() === 0) {
-            ExtractEmailsJob::dispatch($business->id)->onQueue('default');
+        // Persist Social Links
+        if (! empty($mapped['social'])) {
+            foreach ($mapped['social'] as $platform => $url) {
+                if ($url) {
+                    SocialLink::updateOrCreate(
+                        [
+                            'business_id' => $business->id,
+                            'platform' => $platform,
+                        ],
+                        [
+                            'url' => $url,
+                            'is_active' => true,
+                        ]
+                    );
+                }
+            }
+        }
+
+        if (! empty($business->website)) {
+            if ($business->businessEmails()->count() === 0) {
+                ExtractEmailsJob::dispatch($business->id)->onQueue('default');
+            }
+
+            // Always check for/update social links from website
+            FetchSocialMediaLinksJob::dispatch($business->id)->onQueue('default');
         }
 
         return 1;

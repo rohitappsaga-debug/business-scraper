@@ -216,4 +216,28 @@ class BusinessParser
 
         return null;
     }
+
+    /**
+     * Clean website URL by removing tracking parameters.
+     */
+    public static function cleanWebsiteUrl(?string $url): ?string
+    {
+        if (empty($url)) {
+            return null;
+        }
+
+        $url = trim($url);
+
+        // Remove tracking parameters (anything after "?")
+        if (($pos = strpos($url, '?')) !== false) {
+            $url = substr($url, 0, $pos);
+        }
+
+        // Filter out Google Maps search URLs which are sometimes returned as websites
+        if (str_contains($url, 'google.com/maps') || str_contains($url, 'google.co/maps')) {
+            return null;
+        }
+
+        return $url;
+    }
 }

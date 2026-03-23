@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Models\Business;
+use App\Services\SocialLinkService;
 use Illuminate\View\View;
 use Livewire\Component;
 
@@ -29,6 +30,9 @@ class DetailResult extends Component
 
         $emails = $model->businessEmails->pluck('email')->toArray();
         $primaryEmail = $model->email ?? ($emails[0] ?? '');
+
+        $socialLinkService = app(SocialLinkService::class);
+        $socialLinks = $socialLinkService->getLinksForBusiness($model);
 
         $this->business = [
             'id' => $model->id,
@@ -59,7 +63,7 @@ class DetailResult extends Component
             'email_status' => ! empty($primaryEmail) ? 'Found' : 'Searching...',
             'last_updated' => $model->updated_at?->format('d M Y, H:i'),
             'hours' => $model->hours ?? [],
-            'social' => $model->social ?? [],
+            'social' => $socialLinks,
             'all_emails' => $emails,
             'source' => $model->source,
         ];
