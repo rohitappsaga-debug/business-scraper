@@ -91,69 +91,71 @@ class DetailResult extends Component
         }
 
         $this->generatedPrompt = "1️⃣ ROLE DEFINITION
-You are a Senior SaaS Product Designer and Conversion-Focused UI/UX Expert specializing in building premium, high-converting marketing websites for industry-leading SaaS platforms.
+You are a Senior Business Brand Strategist and Ultra-Premium UI/UX Designer specializing in creating standard-setting, high-prestige marketing websites for elite businesses. Your expertise lies in translating a brand's physical excellence into a digital masterpiece that commands authority and drives conversion.
 
 2️⃣ CORE OBJECTIVE
-- **Goal:** Design a high-end, conversion-optimized SaaS landing page for \"{$model->name}\".
-- **Target Audience:** Potential customers and clients looking for top-tier services in the \"{$model->category}\" sector.
-- **Conversion Goal:** Drive primary actions like \"Start Free Trial\", \"Book a Demo\", or \"Get Started\".
+- **Goal:** Design an ultra-premium, world-class landing page for \"{$model->name}\".
+- **Business Identity:** A leading \"{$model->category}\" professional service provider.
+- **Context:** {$model->getGeneratedDescription()}
+- **Conversion Goal:** Secure high-value inquiries, bookings, or consultations.
 
-3️⃣ DESIGN STYLE
-- **SaaS Aesthetics:** Clean, minimal, and premium (Stripe/Notion/Linear level).
-- **Typography:** Strong, modern sans-serif hierarchy (e.g., Inter, Outfit, or Manrope).
-- **Visuals:** Strategic use of whitespace, smooth gradients, and subtle micro-animations.
-- **Color Palette:** A sophisticated modern palette tailored to the {$model->category} industry.
+3️⃣ DESIGN STYLE (ULTRA-PREMIUM)
+- **Aesthetics:** Sophisticated, timeless, and standard-setting. Avoid generic trends; focus on bespoke luxury and professional authority.
+- **Typography:** Masterful pairing of premium serifs for headings and clean, high-legibility sans-serifs for body text (e.g., Playfair Display with Montserrat, or Chrono with Inter).
+- **Visuals:** High-fidelity textures, elegant depth, and cinematic lighting in all UI elements.
+- **Color Palette:** A curated, high-contrast palette that reflects the excellence of the {$model->category} industry in {$model->city}.
 
-4️⃣ PAGE STRUCTURE
-- **Hero Section:** High-impact headline for {$model->name}, persuasive subheadline, primary/secondary CTAs, and a premium visual (product mockup or abstract graphic).
-- **Social Proof:** \"Trusted by\" logo cloud, user stats, or key achievements ($model->rating/5 stars based on {$model->reviews_count} reviews).
-- **Features Section:** 4–6 key features highlighting the specialized {$model->category} solutions.
-- **Product Showcase:** Visual workflows or UI previews demonstrating the value in {$model->city}.
-- **Benefits Section:** Value-driven propositions explaining \"Why Choose Us?\".
-- **Pricing Section:** 2–3 transparent tiers (Starter, Pro, Enterprise) with feature lists.
-- **Testimonials:** High-trust customer quotes with avatars and credentials.
-- **FAQ Section:** Smart accordion for common questions about {$model->name} services.
-- **Final CTA:** A bold, high-contrast section to drive the final conversion.
-- **Footer:** Organized links, social icons, newsletter sign-up, and branding.
+4️⃣ PAGE STRUCTURE (PRESTIGE FOCUS)
+- **Hero Section:** A cinematic introduction with a powerful value statement for {$model->name}, clear high-end CTAs, and a breathtaking visual showcase.
+- **The Prestige Section:** Focused on the unique \"Standard of Excellence\" provided by the business.
+- **Services Portfolio:** Detailed breakdown of premium services offered, tailored to the {$model->category} niche.
+- **Proof of Excellence:** Strategic display of the business's stellar reputation ($model->rating/5 stars based on {$model->reviews_count} verified reviews).
+- **Work & Product Showcase:** A high-end gallery or slider featuring the business's actual work and products.
+- **Investment / Packages:** Clear, transparent, and professionally presented tiers or service packages.
+- **Client Testimonials:** High-impact social proof from elite clientele.
+- **Experience FAQ:** Addressing sophisticated client concerns with professional clarity.
+- **Final Call to Action:** A prestige-focused invitation to collaborate or book.
+- **Global Footer:** Comprehensive navigation, branding, and contact details with architectural symmetry.
 
-5️⃣ NAVBAR DESIGN
-- **Logo:** Clean branding for {$model->name}.
-- **Menu:** Features, Solutions, Pricing, Resources.
-- **Actions:** Login (Ghost Button) and \"Get Started\" (Primary CTA).
+5️⃣ IMAGE GENERATION REQUIREMENTS (CRITICAL)
+Generate high-quality, photorealistic images that represent the business's work, environment, and products:
+- **Project Portfolios:** Cinematic shots of completed work relevant to the \"{$model->category}\" industry.
+- **Product Photography:** Macro and lifestyle shots of the products offered by {$model->name}, using studio lighting and premium staging.
+- **Business Environment:** High-end interior or exterior shots of a business located in {$model->city}, capturing the professional atmosphere.
+- **Style:** Use a consistent \"Premium Photography\" style with shallow depth of field, natural yet enhanced lighting, and a sophisticated color grade.
 
 6️⃣ UI COMPONENTS
-- Glassmorphic Hero card
-- Interactive Feature cards with hover effects
-- Sleek Pricing cards with \"Most Popular\" highlight
-- Clean Testimonial masonry or slider
-- Elegant FAQ accordion
-- High-visibility CTA banners
+- Bespoke Hero layouts with custom masking
+- Interactive Portfolio cards with fluid transitions
+- Elegant Service tiles with rich iconography
+- Modern, clean Pricing/Package tables
+- High-trust Review widgets
+- Seamless, architectural Navbar and Footer
 
 7️⃣ UX REQUIREMENTS
-- Clear and frequent CTA placement (Top, Mid, Bottom)
-- Strong visual hierarchy focusing on the value proposition
-- Frictionless conversion flow
-- Logical content progression to build trust
+- Flawless visual hierarchy that guides the user through the brand story
+- Strategic placement of primary and secondary actions
+- Smooth, meaningful animations that enhance perceived value
+- Absolute focus on clarity, trust, and professional standard
 
 8️⃣ RESPONSIVENESS
-- Mobile-first approach
-- Fully responsive layout for all breakpoints
-- Functional mobile menu (Hamburger/Side-drawer)
+- Flawless adaptation across all modern devices
+- Retaining premium feel and layout integrity on mobile
+- Optimized touch interactions for high-end mobile experiences
 
 9️⃣ CONSTRAINTS
-- ❌ DO NOT generate admin dashboards or panels
-- ❌ DO NOT generate backend systems or internal UI
-- ❌ DO NOT create complex data tables or SaaS panels
-- Avoid clutter; keep it breathable and premium
+- ❌ NO \"SaaS\" or \"Start-up\" terminology; this is a professional business entity.
+- ❌ NO admin dashboards, data tables, or backend UI.
+- ❌ NO cluttered or busy layouts; maintain a breathable, elite atmosphere.
+- ❌ NO generic stock-photo feel; aim for bespoke, high-end photography logic.
 
 🔟 SUCCESS CRITERIA
-- Looks like a world-class SaaS marketing website
-- Clearly communicates the value of \"{$model->name}\" in {$model->city}
-- High conversion potential through persuasive UI/UX
-- Production-ready design logic
+- The design looks like a \$20k+ custom-coded business website.
+- It clearly positions \"{$model->name}\" as the market leader in {$model->city}.
+- Every element screams \"Quality\" and \"Standard\".
 
 1️⃣1️⃣ FINAL INSTRUCTION
-Design a complete SaaS Landing Page UI that is modern, clean, conversion-focused, and production-ready.";
+Design a complete, premium Business Landing Page UI that is modern, clean, standard-setting, and production-ready.";
     }
 
     public function render(): View
