@@ -90,97 +90,70 @@ class DetailResult extends Component
             return;
         }
 
-        $this->generatedPrompt = "### 🔹 ROLE DEFINITION
-You are a Senior Product Designer and SaaS Architect with deep expertise in building scalable platforms, modern dashboards, and high-conversion user experiences. You specialize in creating industry-leading software systems that solve real-world business problems through clean UI/UX and robust technical architecture.
+        $this->generatedPrompt = "1️⃣ ROLE DEFINITION
+You are a Senior SaaS Product Designer and Conversion-Focused UI/UX Expert specializing in building premium, high-converting marketing websites for industry-leading SaaS platforms.
 
-### 🔹 CORE OBJECTIVE
-Build a high-end, production-ready SaaS platform for \"{$model->name}\" categorized under \"{$model->category}\". The goal is to automate operations, manage growth, and provide actionable insights for a business based in {$model->city}.
+2️⃣ CORE OBJECTIVE
+- **Goal:** Design a high-end, conversion-optimized SaaS landing page for \"{$model->name}\".
+- **Target Audience:** Potential customers and clients looking for top-tier services in the \"{$model->category}\" sector.
+- **Conversion Goal:** Drive primary actions like \"Start Free Trial\", \"Book a Demo\", or \"Get Started\".
 
-### 🔹 PRODUCT VISION
-- **Problem:** Fragmented operations and lack of integrated digital scaling tools for businesses in the {$model->category} sector.
-- **Target Users:** Business owners, operational managers, and high-value customers.
-- **Value Proposition:** A unified command center that leverages AI to drive revenue and streamline service delivery.
+3️⃣ DESIGN STYLE
+- **SaaS Aesthetics:** Clean, minimal, and premium (Stripe/Notion/Linear level).
+- **Typography:** Strong, modern sans-serif hierarchy (e.g., Inter, Outfit, or Manrope).
+- **Visuals:** Strategic use of whitespace, smooth gradients, and subtle micro-animations.
+- **Color Palette:** A sophisticated modern palette tailored to the {$model->category} industry.
 
-### 🔹 DESIGN PRINCIPLES
-- Clean, minimalist UI with a focus on data hierarchy.
-- Mobile-first responsiveness and accessibility.
-- SaaS-level quality with seamless transitions and micro-interactions.
-- Scalable design tokens for typography, spacing, and color systems.
+4️⃣ PAGE STRUCTURE
+- **Hero Section:** High-impact headline for {$model->name}, persuasive subheadline, primary/secondary CTAs, and a premium visual (product mockup or abstract graphic).
+- **Social Proof:** \"Trusted by\" logo cloud, user stats, or key achievements ($model->rating/5 stars based on {$model->reviews_count} reviews).
+- **Features Section:** 4–6 key features highlighting the specialized {$model->category} solutions.
+- **Product Showcase:** Visual workflows or UI previews demonstrating the value in {$model->city}.
+- **Benefits Section:** Value-driven propositions explaining \"Why Choose Us?\".
+- **Pricing Section:** 2–3 transparent tiers (Starter, Pro, Enterprise) with feature lists.
+- **Testimonials:** High-trust customer quotes with avatars and credentials.
+- **FAQ Section:** Smart accordion for common questions about {$model->name} services.
+- **Final CTA:** A bold, high-contrast section to drive the final conversion.
+- **Footer:** Organized links, social icons, newsletter sign-up, and branding.
 
-### 🔹 LAYOUT STRUCTURE
-- **Sidebar:** Collapsible navigation with quick-action shortcuts.
-- **Navbar:** Global search, notifications, user profile, and context-aware Breadcrumbs.
-- **Content Area:** Dynamic grid-based layout for dashboards and modules.
+5️⃣ NAVBAR DESIGN
+- **Logo:** Clean branding for {$model->name}.
+- **Menu:** Features, Solutions, Pricing, Resources.
+- **Actions:** Login (Ghost Button) and \"Get Started\" (Primary CTA).
 
-### 🔹 CORE FEATURES
-- **Unified Dashboard:** Real-time business health monitoring.
-- **Lead/Customer Management:** Advanced CRM for the {$model->category} niche.
-- **Analytics Engine:** Visualizing growth, ratings (Current: {$model->rating}), and market trends.
-- **Automated Payments:** Subscription management and invoicing.
-- **System Settings:** Multi-tenant configuration and integration hub.
+6️⃣ UI COMPONENTS
+- Glassmorphic Hero card
+- Interactive Feature cards with hover effects
+- Sleek Pricing cards with \"Most Popular\" highlight
+- Clean Testimonial masonry or slider
+- Elegant FAQ accordion
+- High-visibility CTA banners
 
-### 🔹 CORE SCREENS (DETAILED)
-- **Main Dashboard:** KPI cards (Revenue, Leads, Reviews), Activity Feed, and Growth Charts.
-- **Module Management:** Category-specific workflows (e.g., booking, inventory, or service tracking).
-- **Deep Analytics:** Customer behavior reports and ROI tracking.
-- **Billing & Payments:** Transaction history, payout status, and plan management.
-- **Team & Security:** Role-based access control and audit logs.
+7️⃣ UX REQUIREMENTS
+- Clear and frequent CTA placement (Top, Mid, Bottom)
+- Strong visual hierarchy focusing on the value proposition
+- Frictionless conversion flow
+- Logical content progression to build trust
 
-### 🔹 UI COMPONENTS
-- **Tables:** Sortable, filterable grids with bulk actions and export.
-- **Forms:** Multi-step wizards with real-time validation.
-- **Modals:** Contextual overlays for quick edits and confirmations.
-- **Badges:** Status indicators (Success, Warning, Info, Danger).
-- **Notifications:** In-app toasts and notification center.
+8️⃣ RESPONSIVENESS
+- Mobile-first approach
+- Fully responsive layout for all breakpoints
+- Functional mobile menu (Hamburger/Side-drawer)
 
-### 🔹 DESIGN STYLE
-- **SaaS Modern:** Light/Dark mode support using a sleek slate/indigo palette.
-- **Typography:** Inter or Outfit font family for modern readability.
-- **Spacing:** Strict 4px/8px grid system for perfect alignment.
+9️⃣ CONSTRAINTS
+- ❌ DO NOT generate admin dashboards or panels
+- ❌ DO NOT generate backend systems or internal UI
+- ❌ DO NOT create complex data tables or SaaS panels
+- Avoid clutter; keep it breathable and premium
 
-### 🔹 AI FEATURES
-- **Smart Email Generation:** AI-driven client outreach and follow-ups.
-- **Automation workflows:** Trigger-based actions for customer lifecycle.
-- **Predictive Insights:** Data-backed recommendations for revenue growth.
+🔟 SUCCESS CRITERIA
+- Looks like a world-class SaaS marketing website
+- Clearly communicates the value of \"{$model->name}\" in {$model->city}
+- High conversion potential through persuasive UI/UX
+- Production-ready design logic
 
-### 🔹 DATABASE DESIGN
-- **Users:** Schema for auth, profiles, and preferences.
-- **Businesses:** Multi-tenant structure for {$model->name} metadata.
-- **Leads/Customers:** Relational tables for relationship tracking.
-- **Analytics:** Optimized tables for time-series data and events.
-- **Payments:** Secure ledger for transactions and plans.
-
-### 🔹 API DESIGN
-- RESTful endpoints for all core modules.
-- JWT-based authentication and rate-limiting.
-- Webhook support for third-party integrations (Stripe, Twilio, etc.).
-
-### 🔹 AUTOMATION
-- Background jobs for heavy processing (data scraping, bulk emails).
-- Event-driven workflows for real-time notifications.
-
-### 🔹 MONETIZATION
-- Three-tier pricing (Starter, Professional, Enterprise).
-- Feature-gating based on subscription status.
-- Add-on marketplace for specialized AI tools.
-
-### 🔹 SCALABILITY
-- Modular architecture (Service Classes, Repository Patterns).
-- Horizontal scaling capability with queue systems (Redis/RabbitMQ).
-- Multi-region database support for global businesses.
-
-### 🔹 OUTPUT REQUIREMENTS
-- Full UI mockups and frontend code structure.
-- Documented backend architecture.
-- Production-ready deployment strategy.
-
-### 🔹 CONSTRAINTS
-- No generic, cookie-cutter templates.
-- No basic design elements; must feel like a premium $10k+ SaaS product.
-- Must incorporate business-specific data points: {$model->name} ({$model->website}).
-
-### 🔹 FINAL INSTRUCTION
-Design the complete system ensuring it is scalable, clean, and production-ready.";
+1️⃣1️⃣ FINAL INSTRUCTION
+Design a complete SaaS Landing Page UI that is modern, clean, conversion-focused, and production-ready.";
     }
 
     public function render(): View
