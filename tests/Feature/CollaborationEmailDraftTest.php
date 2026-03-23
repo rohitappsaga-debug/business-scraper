@@ -113,4 +113,59 @@ class CollaborationEmailDraftTest extends TestCase
             'generated_by_ai' => false,
         ]);
     }
+
+    public function test_can_generate_draft_with_dynamic_sender_name(): void
+    {
+        $user = \App\Models\User::factory()->create();
+        $this->actingAs($user);
+
+        $user->settings()->create([
+            'email_sender_name' => 'John Marketing Team',
+        ]);
+
+        CollaborationEmailDraftAgent::fake([[
+            'subject' => 'Partnership Opportunity',
+            'email_body' => 'Hello, John Marketing Team here.',
+        ]]);
+
+        $business = Business::factory()->create([
+            'name' => 'Dynamic Business',
+            'category' => 'Marketing Agency',
+        ]);
+
+        $service = new AICollaborationDraftService;
+        $service->generateDraft($business);
+
+        CollaborationEmailDraftAgent::assertPrompted(function ($prompt) {
+            return $prompt->contains('Sender Name: John Marketing Team') &&
+                   $prompt->contains('introduce John Marketing Team') &&
+                   $prompt->contains('Professional closing using the provided Sender Name ("John Marketing Team")');
+        });
+    }
+
+    public function test_falls_back_to_your_team_if_not_set(): void
+    {
+        $user = \App\Models\User::factory()->create();
+        $this->actingAs($user);
+
+        // No settings created
+
+        CollaborationEmailDraftAgent::fake([[
+            'subject' => 'Partnership Opportunity',
+            'email_body' => 'Hello, Your Team here.',
+        ]]);
+
+        $business = Business::factory()->create([
+            'name' => 'Fallback Business',
+        ]);
+
+        $service = new AICollaborationDraftService;
+        $service->generateDraft($business);
+
+        CollaborationEmailDraftAgent::assertPrompted(function ($prompt) {
+            return $prompt->contains('Sender Name: Your Team') &&
+                   $prompt->contains('introduce Laravel') &&
+                   $prompt->contains('Professional closing using the provided Sender Name ("Your Team")');
+        });
+    }
 }
