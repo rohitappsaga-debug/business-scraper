@@ -47,6 +47,15 @@ class Search extends Component
         $this->redirectRoute('result');
     }
 
+    public function logout(): void
+    {
+        auth()->logout();
+        session()->invalidate();
+        session()->regenerateToken();
+
+        $this->redirectRoute('login');
+    }
+
     public function render(): View
     {
         return view('livewire.search');

@@ -14,6 +14,10 @@
                 <span class="material-symbols-outlined text-sm mr-2">add</span>
                 Start New Search
             </a>
+            <button wire:click="logout" wire:confirm="Are you sure you want to logout?" class="flex items-center justify-center rounded-lg h-10 px-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-red-500 text-sm font-bold hover:bg-red-50 dark:hover:bg-red-900/20 transition-all shadow-sm" title="Logout">
+                <span class="material-symbols-outlined text-[18px] mr-2">logout</span>
+                Logout
+            </button>
         </div>
     </div>
 

@@ -48,6 +48,15 @@ class Result extends Component
             ->paginate(10, ['*'], 'page', $page);
     }
 
+    public function logout(): void
+    {
+        auth()->logout();
+        session()->invalidate();
+        session()->regenerateToken();
+
+        $this->redirectRoute('login');
+    }
+
     public function render(): View
     {
         return view('livewire.result', [

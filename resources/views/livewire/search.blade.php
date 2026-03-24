@@ -9,9 +9,14 @@
                         <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Create New Scraping Job</h1>
                         <p class="text-slate-500 dark:text-slate-400">Configure your parameters to start extracting data from the web in real-time.</p>
                     </div>
-                    <a href="{{ route('settings') }}" wire:navigate class="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-primary transition-all shadow-sm flex items-center justify-center group" title="Account Settings">
-                        <span class="material-symbols-outlined group-hover:rotate-90 transition-transform duration-500">settings</span>
-                    </a>
+                    <div class="flex items-center gap-3">
+                        <a href="{{ route('settings') }}" wire:navigate class="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-primary transition-all shadow-sm flex items-center justify-center group" title="Account Settings">
+                            <span class="material-symbols-outlined group-hover:rotate-90 transition-transform duration-500">settings</span>
+                        </a>
+                        <button wire:click="logout" wire:confirm="Are you sure you want to logout?" class="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all shadow-sm flex items-center justify-center group" title="Logout">
+                            <span class="material-symbols-outlined group-hover:scale-110 transition-transform">logout</span>
+                        </button>
+                    </div>
                 </div>
 
                 @if (session()->has('success'))
