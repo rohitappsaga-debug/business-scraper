@@ -35,6 +35,9 @@
                         <span class="material-symbols-outlined">smart_toy</span>
                         Generate Master Prompt
                     </button>
+                    <a href="{{ route('logout') }}" @click.prevent="$wire.confirmLogout()" class="p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all shadow-sm flex items-center justify-center group cursor-pointer" title="Logout">
+                        <span class="material-symbols-outlined group-hover:scale-110 transition-transform pointer-events-none">logout</span>
+                    </a>
                 </div>
             </div>
 

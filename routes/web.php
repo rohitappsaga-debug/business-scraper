@@ -9,7 +9,7 @@ use App\Livewire\Search;
 use App\Livewire\Settings;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/login', Login::class)->name('login');
+Route::get('/login', Login::class)->name('login')->middleware('guest');
 
 Route::middleware('auth')->group(function () {
     Route::get('/', Search::class)->name('search');
@@ -20,4 +20,12 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/export/csv', [ExportController::class, 'csv'])->name('export.csv');
     Route::get('/export/excel', [ExportController::class, 'excel'])->name('export.excel');
+
+    Route::get('/logout', function () {
+        auth()->logout();
+        session()->invalidate();
+        session()->regenerateToken();
+
+        return redirect()->route('login');
+    })->name('logout');
 });

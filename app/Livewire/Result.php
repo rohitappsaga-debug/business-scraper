@@ -6,6 +6,7 @@ use App\Jobs\ScrapeBusinessesJob;
 use App\Models\ScrapingJob;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\View\View;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class Result extends Component
@@ -26,6 +27,7 @@ class Result extends Component
         session()->flash('message', 'Job #'.$job->id.' has been queued to run again.');
     }
 
+    #[On('cancel-job')]
     public function cancelJob(int $jobId): void
     {
         $job = ScrapingJob::find($jobId);
@@ -48,6 +50,18 @@ class Result extends Component
             ->paginate(10, ['*'], 'page', $page);
     }
 
+    public function confirmLogout(): void
+    {
+        $this->dispatch('open-confirm-modal', [
+            'title' => 'Logout',
+            'message' => 'Are you sure you want to logout of your session?',
+            'confirmButton' => 'Logout',
+            'type' => 'danger',
+            'confirmActionUrl' => route('logout'),
+        ]);
+    }
+
+    #[On('logout')]
     public function logout(): void
     {
         auth()->logout();

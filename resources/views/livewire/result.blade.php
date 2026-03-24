@@ -14,10 +14,10 @@
                 <span class="material-symbols-outlined text-sm mr-2">add</span>
                 Start New Search
             </a>
-            <button wire:click="logout" wire:confirm="Are you sure you want to logout?" class="flex items-center justify-center rounded-lg h-10 px-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-red-500 text-sm font-bold hover:bg-red-50 dark:hover:bg-red-900/20 transition-all shadow-sm" title="Logout">
-                <span class="material-symbols-outlined text-[18px] mr-2">logout</span>
+            <a href="{{ route('logout') }}" @click.prevent="$wire.confirmLogout()" class="flex items-center justify-center rounded-lg h-10 px-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-red-500 text-sm font-bold hover:bg-red-50 dark:hover:bg-red-900/20 transition-all shadow-sm cursor-pointer" title="Logout">
+                <span class="material-symbols-outlined text-[18px] mr-2 pointer-events-none">logout</span>
                 Logout
-            </button>
+            </a>
         </div>
     </div>
 
@@ -84,10 +84,18 @@
                                         <span>View results</span>
                                     </a>
                                     @if (in_array($status, ['pending', 'running']))
-                                        <button type="button" wire:click="cancelJob({{ $job->id }})" wire:loading.attr="disabled" wire:confirm="Are you sure you want to cancel this job?" class="flex items-center justify-center gap-2 px-4 py-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm font-semibold hover:bg-red-100 dark:hover:bg-red-900/40 transition-all" title="Cancel job">
-                                            <span class="material-symbols-outlined text-[18px]" wire:loading.remove wire:target="cancelJob({{ $job->id }})">cancel</span>
-                                            <span class="material-symbols-outlined text-[18px] animate-spin" wire:loading wire:target="cancelJob({{ $job->id }})">sync</span>
-                                            <span>Cancel</span>
+                                        <button type="button" @click="window.dispatchEvent(new CustomEvent('open-confirm-modal', { 
+                                            detail: { 
+                                                title: 'Cancel Job', 
+                                                message: 'Are you sure you want to cancel this scraping job?', 
+                                                confirmButton: 'Cancel Job',
+                                                type: 'danger',
+                                                confirmAction: { name: 'cancel-job', data: { jobId: {{ $job->id }} } }
+                                            } 
+                                        }))" wire:loading.attr="disabled" class="flex items-center justify-center gap-2 px-4 py-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm font-semibold hover:bg-red-100 dark:hover:bg-red-900/40 transition-all" title="Cancel job">
+                                            <span class="material-symbols-outlined text-[18px] pointer-events-none" wire:loading.remove wire:target="cancelJob({{ $job->id }})">cancel</span>
+                                            <span class="material-symbols-outlined text-[18px] animate-spin pointer-events-none" wire:loading wire:target="cancelJob({{ $job->id }})">sync</span>
+                                            <span class="pointer-events-none">Cancel</span>
                                         </button>
                                     @endif
                                     <button type="button" wire:click="rerunJob({{ $job->id }})" wire:loading.attr="disabled" class="flex items-center justify-center gap-2 px-4 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all" title="Rerun job">

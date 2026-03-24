@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Jobs\ScrapeBusinessesJob;
 use App\Models\ScrapingJob;
 use Illuminate\View\View;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class Search extends Component
@@ -47,6 +48,18 @@ class Search extends Component
         $this->redirectRoute('result');
     }
 
+    public function confirmLogout(): void
+    {
+        $this->dispatch('open-confirm-modal', [
+            'title' => 'Logout',
+            'message' => 'Are you sure you want to logout of your session?',
+            'confirmButton' => 'Logout',
+            'type' => 'danger',
+            'confirmActionUrl' => route('logout'),
+        ]);
+    }
+
+    #[On('logout')]
     public function logout(): void
     {
         auth()->logout();
@@ -58,6 +71,6 @@ class Search extends Component
 
     public function render(): View
     {
-        return view('livewire.search');
+        return view('livewire.search')->layout('layouts.app', ['title' => 'Create New Scraping Job']);
     }
 }

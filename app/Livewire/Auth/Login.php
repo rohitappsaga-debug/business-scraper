@@ -18,6 +18,13 @@ class Login extends Component
 
     public bool $showPassword = false;
 
+    public function mount(): void
+    {
+        if (auth()->check()) {
+            $this->redirect(route('search'), navigate: true);
+        }
+    }
+
     protected array $rules = [
         'username' => 'required',
         'password' => 'required',

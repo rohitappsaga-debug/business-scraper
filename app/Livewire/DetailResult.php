@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Models\Business;
 use App\Services\SocialLinkService;
 use Illuminate\View\View;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class DetailResult extends Component
@@ -160,6 +161,27 @@ Generate high-quality, photorealistic images that represent the business's work,
 
 1️⃣1️⃣ FINAL INSTRUCTION
 Design a complete, premium Business Landing Page UI that is modern, clean, standard-setting, and production-ready.";
+    }
+
+    public function confirmLogout(): void
+    {
+        $this->dispatch('open-confirm-modal', [
+            'title' => 'Logout',
+            'message' => 'Are you sure you want to logout of your session?',
+            'confirmButton' => 'Logout',
+            'type' => 'danger',
+            'confirmActionUrl' => route('logout'),
+        ]);
+    }
+
+    #[On('logout')]
+    public function logout(): void
+    {
+        auth()->logout();
+        session()->invalidate();
+        session()->regenerateToken();
+
+        $this->redirectRoute('login');
     }
 
     public function render(): View

@@ -4,14 +4,19 @@
         <main class="flex-1 flex flex-col overflow-y-auto w-full items-center justify-center min-h-screen">
             <!-- Page Content -->
             <div class="max-w-4xl mx-auto w-full px-8 py-8">
-                <div class="mb-8">
-                    <div class="flex items-center gap-3 mb-2">
-                        <a href="{{ route('search') }}" wire:navigate class="p-2 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-primary transition-colors flex items-center justify-center shadow-sm">
-                            <span class="material-symbols-outlined">arrow_back</span>
+                <div class="mb-8 flex justify-between items-start">
+                    <div class="flex items-center gap-4">
+                        <a href="{{ route('search') }}" wire:navigate class="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-primary transition-all shadow-sm flex items-center justify-center group" title="Back to Search">
+                            <span class="material-symbols-outlined group-hover:-translate-x-1 transition-transform">arrow_back</span>
                         </a>
-                        <h1 class="text-3xl font-bold text-slate-900 dark:text-white">Settings</h1>
+                        <div>
+                            <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-1">Settings</h1>
+                            <p class="text-slate-500 dark:text-slate-400">Configure your account and application preferences.</p>
+                        </div>
                     </div>
-                    <p class="text-slate-500 dark:text-slate-400 pl-[52px]">Configure your account and application preferences.</p>
+                    <a href="{{ route('logout') }}" @click.prevent="$wire.confirmLogout()" class="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all shadow-sm flex items-center justify-center group" title="Logout">
+                        <span class="material-symbols-outlined group-hover:scale-110 transition-transform pointer-events-none">logout</span>
+                    </a>
                 </div>
 
                 @if (session()->has('success'))

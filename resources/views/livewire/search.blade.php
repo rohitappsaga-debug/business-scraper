@@ -13,9 +13,9 @@
                         <a href="{{ route('settings') }}" wire:navigate class="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-primary transition-all shadow-sm flex items-center justify-center group" title="Account Settings">
                             <span class="material-symbols-outlined group-hover:rotate-90 transition-transform duration-500">settings</span>
                         </a>
-                        <button wire:click="logout" wire:confirm="Are you sure you want to logout?" class="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all shadow-sm flex items-center justify-center group" title="Logout">
-                            <span class="material-symbols-outlined group-hover:scale-110 transition-transform">logout</span>
-                        </button>
+                        <a href="{{ route('logout') }}" @click.prevent="$wire.confirmLogout()" class="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all shadow-sm flex items-center justify-center group" title="Logout">
+                            <span class="material-symbols-outlined group-hover:scale-110 transition-transform pointer-events-none">logout</span>
+                        </a>
                     </div>
                 </div>
 
