@@ -11,7 +11,7 @@
                         </a>
                         <h1 class="text-3xl font-bold text-slate-900 dark:text-white">Settings</h1>
                     </div>
-                    <p class="text-slate-500 dark:text-slate-400 ml-13">Configure your account and application preferences.</p>
+                    <p class="text-slate-500 dark:text-slate-400 pl-[52px]">Configure your account and application preferences.</p>
                 </div>
 
                 @if (session()->has('success'))
@@ -33,9 +33,11 @@
                                         <label class="text-sm font-semibold text-slate-700 dark:text-slate-300">Email Sender Name</label>
                                         <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 uppercase tracking-wider">Required</span>
                                     </div>
-                                    <div class="relative">
-                                        <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">person_edit</span>
-                                        <input wire:model="emailSenderName" class="w-full pl-12 pr-4 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-slate-400" placeholder="e.g. John Marketing Team, GrowthX Agency" type="text" />
+                                    <div class="group flex items-center bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all overflow-hidden">
+                                        <div class="flex items-center justify-center pl-4 pr-3 text-slate-400 group-focus-within:text-primary transition-colors">
+                                            <span class="material-symbols-outlined">person_edit</span>
+                                        </div>
+                                        <input wire:model="emailSenderName" class="block w-full py-4 pr-4 bg-transparent border-0 focus:ring-0 outline-none placeholder:text-slate-400 text-slate-900 dark:text-white" placeholder="e.g. John Marketing Team, GrowthX Agency" type="text" />
                                     </div>
                                     <p class="text-xs text-slate-500 dark:text-slate-400">This name will be used by the AI when generating collaboration email drafts instead of the default 'Laravel Team'.</p>
                                     @error('emailSenderName') <span class="text-red-500 text-xs font-medium">{{ $message }}</span> @enderror

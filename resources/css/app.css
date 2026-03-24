@@ -15,10 +15,3 @@
     --color-background-dark: #121121;
 }
 
-@layer base {
-    * {
-        transition-property: background-color, border-color, color, fill, stroke;
-        transition-duration: 200ms;
-        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    }
-}
