@@ -57,8 +57,12 @@ class ScrapingJob extends Model
 
     public function markForRerun(): void
     {
+        // Delete old results so the results page only shows data from the new run
+        $this->businesses()->delete();
+
         $this->update([
             'status' => 'pending',
+            'results_count' => 0,
             'error_message' => null,
         ]);
     }

@@ -7,7 +7,6 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
-        "flatroy/laravel-apify": "dev-main",
         "guzzlehttp/guzzle": "^7.10",
         "laravel/ai": "^0.3.0",
         "laravel/framework": "^12.0",
@@ -15,6 +14,7 @@
         "livewire/livewire": "^3.0",
         "maatwebsite/excel": "^3.1",
         "maennchen/zipstream-php": "^2.1",
+        "roach-php/laravel": "^3.2",
         "spatie/crawler": "^8.5",
         "symfony/css-selector": "^7.4",
         "symfony/dom-crawler": "^7.4"

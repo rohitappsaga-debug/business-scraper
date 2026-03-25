@@ -3,10 +3,11 @@
 namespace App\Jobs;
 
 use App\Models\ScrapingJob;
-use App\Scrapers\Runners\ApifyRunner;
+use App\Scrapers\Spiders\BusinessSpider;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
+use RoachPHP\Roach;
 use Throwable;
 
 class ScrapeBusinessesJob implements ShouldQueue
@@ -31,36 +32,42 @@ class ScrapeBusinessesJob implements ShouldQueue
             return;
         }
 
-        Log::info('Starting scrape job', [
+        Log::info('Starting Roach scrape job', [
             'job_id' => $this->scrapingJob->id,
             'keyword' => $this->scrapingJob->keyword,
             'location' => $this->scrapingJob->location,
-            'source' => $this->scrapingJob->source,
         ]);
 
         $this->scrapingJob->markAsRunning();
 
-        /** @var ApifyRunner $runner */
-        $runner = app(ApifyRunner::class);
-        $savedCount = $runner->run($this->scrapingJob);
-
-        $this->scrapingJob->refresh();
-
-        if ($this->scrapingJob->isCancelled()) {
-            Log::info('Scrape job was cancelled during execution', [
+        try {
+            Roach::startSpider(BusinessSpider::class, context: [
+                'keyword' => $this->scrapingJob->keyword,
+                'city' => $this->scrapingJob->location,
                 'job_id' => $this->scrapingJob->id,
-                'saved_before_cancel' => $savedCount,
             ]);
 
-            return;
+            $this->scrapingJob->refresh();
+
+            if ($this->scrapingJob->isCancelled()) {
+                Log::info('Scrape job was cancelled during execution', [
+                    'job_id' => $this->scrapingJob->id,
+                ]);
+
+                return;
+            }
+
+            $savedCount = $this->scrapingJob->businesses()->count();
+            $this->scrapingJob->markAsCompleted($savedCount);
+
+            Log::info('Roach scrape job completed', [
+                'job_id' => $this->scrapingJob->id,
+                'saved' => $savedCount,
+            ]);
+        } catch (Throwable $e) {
+            $this->failed($e);
+            throw $e;
         }
-
-        $this->scrapingJob->markAsCompleted($savedCount);
-
-        Log::info('Scrape job completed', [
-            'job_id' => $this->scrapingJob->id,
-            'saved' => $savedCount,
-        ]);
     }
 
     public function failed(Throwable $exception): void
