@@ -87,6 +87,37 @@ class DetailResult extends Component
         }
     }
 
+    public function getBusinessType(string $category): string
+    {
+        $category = strtolower($category);
+
+        if (str_contains($category, 'hospital') || str_contains($category, 'clinic') || str_contains($category, 'doctor') || str_contains($category, 'health') || str_contains($category, 'medical') || str_contains($category, 'dentist')) {
+            return 'Healthcare';
+        }
+
+        if (str_contains($category, 'restaurant') || str_contains($category, 'cafe') || str_contains($category, 'food') || str_contains($category, 'dining') || str_contains($category, 'bakery')) {
+            return 'Restaurant';
+        }
+
+        if (str_contains($category, 'education') || str_contains($category, 'school') || str_contains($category, 'university') || str_contains($category, 'college') || str_contains($category, 'academy') || str_contains($category, 'training')) {
+            return 'Education';
+        }
+
+        if (str_contains($category, 'corporate') || str_contains($category, 'company') || str_contains($category, 'business') || str_contains($category, 'agency') || str_contains($category, 'consulting') || str_contains($category, 'legal') || str_contains($category, 'finance')) {
+            return 'Corporate';
+        }
+
+        if (str_contains($category, 'coach') || str_contains($category, 'influencer') || str_contains($category, 'personal') || str_contains($category, 'speaker') || str_contains($category, 'author')) {
+            return 'Personal Brand';
+        }
+
+        if (str_contains($category, 'lifestyle') || str_contains($category, 'gym') || str_contains($category, 'spa') || str_contains($category, 'beauty') || str_contains($category, 'fashion') || str_contains($category, 'travel')) {
+            return 'Lifestyle';
+        }
+
+        return 'Corporate'; // Default
+    }
+
     public function generateMasterPrompt(): void
     {
         $model = Business::find($this->id);
@@ -95,72 +126,116 @@ class DetailResult extends Component
             return;
         }
 
+        $businessType = $this->getBusinessType($model->category ?? 'Business');
+        $industryLogic = $this->getIndustrySpecificLogic($businessType, $model);
+
         $this->generatedPrompt = "1️⃣ ROLE DEFINITION
-You are a Senior Business Brand Strategist and Ultra-Premium UI/UX Designer specializing in creating standard-setting, high-prestige marketing websites for elite businesses. Your expertise lies in translating a brand's physical excellence into a digital masterpiece that commands authority and drives conversion.
+You are an Elite AI Product Designer, Senior Business Brand Strategist, and Industry-Specific UX Architect. You specialize in creating high-prestige, conversion-optimized landing pages for top-tier {$businessType} entities.
 
 2️⃣ CORE OBJECTIVE
-- **Goal:** Design an ultra-premium, world-class landing page for \"{$model->name}\".
-- **Business Identity:** A leading \"{$model->category}\" professional service provider.
+- **Goal:** Design a world-class, premium landing page for \"{$model->name}\".
+- **Business Identity:** A leading \"{$model->category}\" provider in {$model->city}.
 - **Context:** {$model->getGeneratedDescription()}
-- **Conversion Goal:** Secure high-value inquiries, bookings, or consultations.
+- **Target:** {$industryLogic['target']}
 
-3️⃣ DESIGN STYLE (ULTRA-PREMIUM)
-- **Aesthetics:** Sophisticated, timeless, and standard-setting. Avoid generic trends; focus on bespoke luxury and professional authority.
-- **Typography:** Masterful pairing of premium serifs for headings and clean, high-legibility sans-serifs for body text (e.g., Playfair Display with Montserrat, or Chrono with Inter).
-- **Visuals:** High-fidelity textures, elegant depth, and cinematic lighting in all UI elements.
-- **Color Palette:** A curated, high-contrast palette that reflects the excellence of the {$model->category} industry in {$model->city}.
+3️⃣ DESIGN STYLE
+- **Aesthetic:** {$industryLogic['aesthetic']}
+- **Typography:** Masterful pairing of high-end fonts (e.g., Serif for headings, Sans-serif for body).
+- **Vibe:** Premium, standard-setting, and highly authoritative.
 
-4️⃣ PAGE STRUCTURE (PRESTIGE FOCUS)
-- **Hero Section:** A cinematic introduction with a powerful value statement for {$model->name}, clear high-end CTAs, and a breathtaking visual showcase.
-- **The Prestige Section:** Focused on the unique \"Standard of Excellence\" provided by the business.
-- **Services Portfolio:** Detailed breakdown of premium services offered, tailored to the {$model->category} niche.
-- **Proof of Excellence:** Strategic display of the business's stellar reputation ($model->rating/5 stars based on {$model->reviews_count} verified reviews).
-- **Work & Product Showcase:** A high-end gallery or slider featuring the business's actual work and products.
-- **Investment / Packages:** Clear, transparent, and professionally presented tiers or service packages.
-- **Client Testimonials:** High-impact social proof from elite clientele.
-- **Experience FAQ:** Addressing sophisticated client concerns with professional clarity.
-- **Final Call to Action:** A prestige-focused invitation to collaborate or book.
-- **Global Footer:** Comprehensive navigation, branding, and contact details with architectural symmetry.
+4️⃣ PAGE STRUCTURE (DYNAMIC ⚠️)
+{$industryLogic['structure']}
 
-5️⃣ IMAGE GENERATION REQUIREMENTS (CRITICAL)
-Generate high-quality, photorealistic images that represent the business's work, environment, and products:
-- **Project Portfolios:** Cinematic shots of completed work relevant to the \"{$model->category}\" industry.
-- **Product Photography:** Macro and lifestyle shots of the products offered by {$model->name}, using studio lighting and premium staging.
-- **Business Environment:** High-end interior or exterior shots of a business located in {$model->city}, capturing the professional atmosphere.
-- **Style:** Use a consistent \"Premium Photography\" style with shallow depth of field, natural yet enhanced lighting, and a sophisticated color grade.
+5️⃣ IMAGE GENERATION REQUIREMENTS
+Generate photorealistic, high-end visuals representing:
+{$industryLogic['images']}
+- Style: Consistent \"Editorial Photography\" with shallow depth, cinematic lighting, and professional grading.
 
 6️⃣ UI COMPONENTS
-- Bespoke Hero layouts with custom masking
-- Interactive Portfolio cards with fluid transitions
-- Elegant Service tiles with rich iconography
-- Modern, clean Pricing/Package tables
-- High-trust Review widgets
-- Seamless, architectural Navbar and Footer
+- {$industryLogic['components']}
+- Bespoke Hero sections
+- Interactive service/product grids
+- High-trust social proof widgets
 
 7️⃣ UX REQUIREMENTS
-- Flawless visual hierarchy that guides the user through the brand story
-- Strategic placement of primary and secondary actions
-- Smooth, meaningful animations that enhance perceived value
-- Absolute focus on clarity, trust, and professional standard
+- conversion-focused visual hierarchy
+- Seamless micro-interactions
+- Absolute focus on industry-specific trust signals
 
 8️⃣ RESPONSIVENESS
-- Flawless adaptation across all modern devices
-- Retaining premium feel and layout integrity on mobile
-- Optimized touch interactions for high-end mobile experiences
+- Flawless Mobile-first execution
+- Retaining premium atmosphere across all screen sizes
 
 9️⃣ CONSTRAINTS
-- ❌ NO \"SaaS\" or \"Start-up\" terminology; this is a professional business entity.
-- ❌ NO admin dashboards, data tables, or backend UI.
-- ❌ NO cluttered or busy layouts; maintain a breathable, elite atmosphere.
-- ❌ NO generic stock-photo feel; aim for bespoke, high-end photography logic.
+- ❌ NO SaaS or generic 'Startup' UI
+- ❌ NO administrative dashboards
+- ❌ NO generic stock imagery templates
+- ❌ NO cluttered layouts
 
 🔟 SUCCESS CRITERIA
-- The design looks like a \$20k+ custom-coded business website.
-- It clearly positions \"{$model->name}\" as the market leader in {$model->city}.
-- Every element screams \"Quality\" and \"Standard\".
+- Looks like a \$25,000+ custom-coded site
+- Perfectly matches the {$businessType} industry standards
+- Built for maximum authority and trust
 
 1️⃣1️⃣ FINAL INSTRUCTION
-Design a complete, premium Business Landing Page UI that is modern, clean, standard-setting, and production-ready.";
+Design a complete {$businessType} landing page UI for \"{$model->name}\" that is industry-specific, premium, and production-ready.";
+    }
+
+    private function getIndustrySpecificLogic(string $type, Business $model): array
+    {
+        $city = $model->city ?? 'your city';
+
+        return match ($type) {
+            'Healthcare' => [
+                'target' => 'Building deep patient trust and facilitating easy appointment scheduling.',
+                'aesthetic' => 'Trust-focused, ultra-clean, serene, and professional. Use sterile but warm color palettes (soft blues, whites, teal).',
+                'structure' => "- Hero: Expertise and Compassion\n- Our Doctors: Prestige medical staff profiles\n- Treatments & Specializations: Detailed medical services\n- Patient Success Stories: High-trust testimonials\n- Book Appointment: Seamless booking flow\n- Clinic Technology: Showcasing modern facilities",
+                'images' => "- Close-up of empathetic healthcare professionals in {$city}\n- Modern, high-tech clinic interiors\n- Subtle medical equipment with soft lighting",
+                'components' => 'Appointment booking widgets, Treatment cards, Doctor profiles',
+            ],
+            'Restaurant' => [
+                'target' => 'Sensory appeal and immediate reservation conversion.',
+                'aesthetic' => 'Visual-heavy, atmospheric, and appetizing. Use rich textures, deep blacks, or warm earthy tones depending on the cuisine.',
+                'structure' => "- Hero: The Signature Dish experience\n- Our Story / Chef: The culinary philosophy\n- The Menu: Interactive, high-end dish browser\n- Atmospheric Gallery: Interior and vibe showcase\n- Reservations: Urgent and elegant CTA\n- Location & Private Dining: Event focus",
+                'images' => "- Cinematic food photography of signature dishes\n- Atmospheric interior shots of the restaurant in {$city}\n- Lifestyle shots of happy patrons dining",
+                'components' => 'Interactive menus, Reservation forms, Food sliders',
+            ],
+            'Education' => [
+                'target' => 'Academic authority and streamlined admission enrollment.',
+                'aesthetic' => 'Structured, organized, academic, and inspiring. Use prestigious blues, deep maroons, or clean scholarly whites.',
+                'structure' => "- Hero: The Future of Learning\n- Academic Programs / Courses: Filterable program list\n- Meet the Faculty: Authority profiles\n- Campus / Lab Showcase: Facility focus\n- Admissions Path: Step-by-step enrollment\n- Student/Alumni Success: Social evidence",
+                'images' => "- Modern classroom or lab environments\n- Engaged faculty members mentoring students\n- Professional shots of the campus in {$city}",
+                'components' => 'Course browsers, Admissions timelines, Faculty cards',
+            ],
+            'Corporate' => [
+                'target' => 'Professional authority and high-value lead capture.',
+                'aesthetic' => 'Clean, modern, architectural, and efficient. Use corporate blues, grays, and high-impact white space.',
+                'structure' => "- Hero: The Value Proposition\n- Our Services / Expertise: B2B focus\n- Case Studies / Success Stories: Demonstrated results\n- Leadership Team: Corporate structure\n- Insight / Blog: Thought leadership\n- Global Partners / Clients: Logo clouds of trust",
+                'images' => "- Sleek office architecture and collaborative spaces\n- Professional B2B interactions\n- Abstract representations of growth and strategy",
+                'components' => 'Service portfolios, Client logo grids, Content hubs',
+            ],
+            'Personal Brand' => [
+                'target' => 'Building authority and personal connection for high-end coaching/consulting.',
+                'aesthetic' => 'Authority-driven, bold, and personality-focused. Use personal colors, high-key photography, and bold typography.',
+                'structure' => "- Hero: The One-on-One transformation\n- Profile / My Journey: Narrative focus\n- Expertise Pillars: What I teach/do\n- Elite Testimonials: Proof of transformation\n- Offerings / Masterclasses: Direct conversion\n- Daily Insights: Authentic content",
+                'images' => "- High-quality portraits of the brand owner\n- Speaking engagements or workshops\n- Lifestyle shots reflecting the brand philosophy",
+                'components' => 'Testimonial carousels, Course/Webinar cards, Personal story timelines',
+            ],
+            'Lifestyle' => [
+                'target' => 'Aspirational lifestyle appeal and service bookings.',
+                'aesthetic' => 'Aspirational, vibrant, and sleek. Use trendy colors, soft shadows, and dynamic layouts.',
+                'structure' => "- Hero: Living the Best Life\n- Experiences / Services: Aspirational focus\n- Visual Gallery: Lifestyle showcase\n- Customer Experiences: Vibe-focused reviews\n- Book Your Experience: Easy booking\n- Community / Social: Real-time vibe",
+                'images' => "- High-energy lifestyle shots\n- Spa/Gym/Travel environments in {$city}\n- Minimalist product/service staging",
+                'components' => 'Galleries, Booking widgets, Experience cards',
+            ],
+            default => [
+                'target' => 'General business growth and customer trust.',
+                'aesthetic' => 'Professional, balanced, and modern.',
+                'structure' => "- Hero: What we do\n- Services: How we help\n- About Us: Who we are\n- Social Proof: Why trust us\n- Contact: Work with us",
+                'images' => "- Professional business environment\n- Team at work\n- Customer service focus",
+                'components' => 'Contact forms, Service grids, Trust badges',
+            ],
+        };
     }
 
     public function confirmLogout(): void
