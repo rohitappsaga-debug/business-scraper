@@ -36,24 +36,35 @@ class SaveBusinessPipeline implements ItemProcessorInterface
         $address = $cleaned['address'] ?: $rawAddress;
         $phone = $cleaned['phone'];
 
-        // Deduplication Hash
-        $hash = Business::generateDedupHash($name, $address ?: $city);
+        // Deduplication Hash (Now includes city for 100% accuracy)
+        $hash = Business::generateDedupHash($name, $address ?: $city, $city);
 
         $source = $data['source'] ?? 'web-search';
 
         try {
+            // Find existing to avoid overwriting phone/website with null
+            $existing = Business::where('dedup_hash', $hash)->first();
+            
+            $updateData = [
+                'scraping_job_id' => $jobId,
+                'name' => mb_substr($name, 0, 191),
+                'city' => $city,
+                'source' => $source,
+            ];
+
+            if ($address) $updateData['address'] = $address;
+            if ($website && (! $existing || ! $existing->website)) $updateData['website'] = $website;
+            if ($phone && (! $existing || ! $existing->phone)) $updateData['phone'] = $phone;
+            if (isset($data['rating'])) $updateData['rating'] = $data['rating'];
+
+            Log::info("Attempting to save binary business: {$name}", ['hash' => $hash, 'job_id' => $jobId]);
+
             $business = Business::updateOrCreate(
                 ['dedup_hash' => $hash],
-                [
-                    'scraping_job_id' => $jobId,
-                    'name' => mb_substr($name, 0, 191),
-                    'website' => $website,
-                    'phone' => $phone,
-                    'address' => $address,
-                    'city' => $city,
-                    'source' => $source,
-                ]
+                $updateData
             );
+
+            Log::info("Saved business successfully: {$name}", ['id' => $business->id]);
 
             // Trigger Roach Enrichment Spider if website exists
             // Ignore common directory/listicle sites

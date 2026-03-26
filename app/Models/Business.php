@@ -66,11 +66,11 @@ class Business extends Model
     }
 
     /**
-     * Generate a deduplication hash from name and address.
+     * Generate a deduplication hash from name, address, and city.
      */
-    public static function generateDedupHash(string $name, string $address): string
+    public static function generateDedupHash(string $name, string $address, string $city = ''): string
     {
-        return md5(strtolower(trim($name)).'|'.strtolower(trim($address)));
+        return md5(strtolower(trim($name)).'|'.strtolower(trim($address)).'|'.strtolower(trim($city)));
     }
 
     /**
