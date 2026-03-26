@@ -40,6 +40,7 @@ class Search extends Component
             'location' => $this->location,
             'radius' => 25,
             'source' => 'roach',
+            'limit' => $this->limit,
             'status' => 'pending',
         ]);
 

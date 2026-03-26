@@ -19,6 +19,7 @@ class ScrapingJob extends Model
         'status',
         'results_count',
         'error_message',
+        'limit',
     ];
 
     public function casts(): array
@@ -26,6 +27,7 @@ class ScrapingJob extends Model
         return [
             'radius' => 'integer',
             'results_count' => 'integer',
+            'limit' => 'integer',
         ];
     }
 

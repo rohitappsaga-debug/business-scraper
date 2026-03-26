@@ -63,13 +63,15 @@ class GoogleLocalSpider extends BasicSpider
             }
         }
 
-        if (!$foundNodes || $foundNodes->count() === 0) {
+        if (! $foundNodes || $foundNodes->count() === 0) {
             // Last ditch effort: find anything with a data-cid
             $foundNodes = $crawler->filter('[data-cid]');
         }
 
-        if (!$foundNodes || $foundNodes->count() === 0) {
+        if (! $foundNodes || $foundNodes->count() === 0) {
             Log::info('GoogleLocalSpider: No listings found with current selectors.');
+            yield from [];
+
             return;
         }
 
@@ -84,7 +86,7 @@ class GoogleLocalSpider extends BasicSpider
                 $nameSelectors = ['div[role="heading"]', '.OSrXXb', 'span.OSrXXb', '.dbg0pd', 'h3', '.V03Yec'];
                 $name = $this->extractFirst($nodeCrawler, $nameSelectors);
 
-                if (!$name || strlen($name) < 2) {
+                if (! $name || strlen($name) < 2) {
                     continue;
                 }
 
@@ -95,8 +97,12 @@ class GoogleLocalSpider extends BasicSpider
                     $ratingNode = $nodeCrawler->filter($rSel);
                     if ($ratingNode->count() > 0) {
                         $ratingText = $ratingNode->text();
-                        if (preg_match('/(\d\.\d)/', $ratingText, $m)) $rating = $m[1];
-                        if (preg_match('/\((\d+)\)/', $ratingText, $m)) $reviewsCount = $m[1];
+                        if (preg_match('/(\d\.\d)/', $ratingText, $m)) {
+                            $rating = $m[1];
+                        }
+                        if (preg_match('/\((\d+)\)/', $ratingText, $m)) {
+                            $reviewsCount = $m[1];
+                        }
                         break;
                     }
                 }
@@ -118,14 +124,39 @@ class GoogleLocalSpider extends BasicSpider
                 }
 
                 // 4. Website
-                $website = $nodeCrawler->filter('a[href*="http"]')->each(function (Crawler $link) {
-                    $href = $link->attr('href');
-                    if (str_contains($href, 'google.com') || str_contains($href, 'maps.google') || str_contains($href, 'googleads')) {
-                        return null;
+                $website = null;
+                // Try selectors that Google often uses for the "Website" button
+                $siteSelectors = ['a[aria-label*="Website"]', 'a.yYVkv', 'a.L967Ye', 'a[data-footer-url]', '.V03Yec a', '[data-url]'];
+                foreach ($siteSelectors as $ss) {
+                    try {
+                        $sNode = $nodeCrawler->filter($ss);
+                        if ($sNode->count() > 0) {
+                            $website = $sNode->first()->attr('href') ?: $sNode->first()->attr('data-url');
+                            if ($website && ! str_contains($website, 'google.com')) {
+                                break;
+                            }
+                        }
+                    } catch (\Exception) {
+                        continue;
                     }
-                    return $href;
-                });
-                $website = array_filter($website)[0] ?? null;
+                }
+
+                if ($website) {
+                    Log::info("GoogleLocalSpider: Found website for {$name}: {$website}");
+                }
+
+                if (! $website) {
+                    // Fallback: any link that isn't Google internal
+                    $website = $nodeCrawler->filter('a[href*="http"]')->each(function (Crawler $link) {
+                        $href = $link->attr('href');
+                        if (str_contains($href, 'google.com') || str_contains($href, 'maps.google') || str_contains($href, 'googleads')) {
+                            return null;
+                        }
+
+                        return $href;
+                    });
+                    $website = array_filter($website)[0] ?? null;
+                }
 
                 $cid = $nodeCrawler->attr('data-cid') ?: null;
 
@@ -145,11 +176,49 @@ class GoogleLocalSpider extends BasicSpider
 
             } catch (\Exception $e) {
                 Log::error('GoogleLocalSpider Error: '.$e->getMessage());
+
                 continue;
             }
         }
 
         Log::info("GoogleLocalSpider: yielded {$foundCount} results.");
+
+        // PAGINATION
+        $limit = $this->context['limit'] ?? 100;
+        $currentPage = $this->context['page'] ?? 1;
+        $totalFoundSoFar = ($this->context['total_found'] ?? 0) + $foundCount;
+
+        if ($totalFoundSoFar < $limit && $currentPage < 5) {
+            $nextSelectors = ['a#pnnext', 'a.pnnext', 'a[aria-label="Next"]'];
+            $nextLink = null;
+            foreach ($nextSelectors as $sel) {
+                $nextLink = $crawler->filter($sel);
+                if ($nextLink->count() > 0) {
+                    break;
+                }
+            }
+
+            if ($nextLink && $nextLink->count() > 0) {
+                $nextUrl = $nextLink->first()->attr('href');
+                if (! str_starts_with($nextUrl, 'http')) {
+                    $nextUrl = 'https://www.google.com'.$nextUrl;
+                }
+
+                Log::info('GoogleLocalSpider: Found Next button. Following to page '.($currentPage + 1));
+
+                yield $this->request('GET', $nextUrl, 'parse', [
+                    'headers' => $this->buildHeaders(),
+                    'context' => array_merge($this->context, [
+                        'page' => $currentPage + 1,
+                        'total_found' => $totalFoundSoFar,
+                    ]),
+                ]);
+            } else {
+                Log::info("GoogleLocalSpider: No Next button found on page {$currentPage}. Stopping.");
+            }
+        } else {
+            Log::info("GoogleLocalSpider: Reached limit ({$totalFoundSoFar}/{$limit}) or max pages ({$currentPage}). Stopping.");
+        }
     }
 
     private function extractFirst(Crawler $c, array $selectors): ?string

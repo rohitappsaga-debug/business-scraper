@@ -6,6 +6,7 @@ use App\Models\Business;
 use App\Models\BusinessEmail;
 use App\Models\SocialLink;
 use App\Scrapers\Parsers\EmailParser;
+use App\Scrapers\Parsers\PhoneParser;
 use Illuminate\Support\Facades\Log;
 use RoachPHP\Downloader\Middleware\HttpErrorMiddleware;
 use RoachPHP\Http\Request;
@@ -68,6 +69,13 @@ class BusinessEnrichmentSpider extends BasicSpider
             $business->update(['email' => $emails[0]]);
         }
 
+        // 1.5 Extract Phone
+        $phones = PhoneParser::extractFromHtml($html);
+        if (empty($business->phone) && ! empty($phones)) {
+            $business->update(['phone' => $phones[0]]);
+            Log::info("Extracted phone from homepage for {$business->name}: {$phones[0]}");
+        }
+
         // 2. Extract Social Links
         $this->extractSocialLinks($response, $business);
 
@@ -99,6 +107,11 @@ class BusinessEnrichmentSpider extends BasicSpider
                 ['business_id' => $business->id, 'email' => $email],
                 ['verified' => false]
             );
+        }
+
+        $phones = PhoneParser::extractFromHtml($html);
+        if (empty($business->phone) && ! empty($phones)) {
+            $business->update(['phone' => $phones[0]]);
         }
 
         $this->extractSocialLinks($response, $business);

@@ -5,9 +5,7 @@ namespace App\Services;
 use App\Jobs\EnrichBusinessJob;
 use App\Models\Business;
 use App\Scrapers\Parsers\BusinessParser;
-use App\Scrapers\Spiders\BusinessEnrichmentSpider;
 use Illuminate\Support\Facades\Log;
-use RoachPHP\Roach;
 
 class BusinessService
 {
@@ -73,8 +71,10 @@ class BusinessService
                 $updateData
             );
 
-            // Dispatch EnrichBusinessJob if website exists
-            if ($website && ! preg_match('/(?:justdial\.com|sulekha\.com|indiamart\.com|tradeindia\.com|yellowpages\.in|yelp\.com|threebestrated\.in|urbanco\.in)/i', $website)) {
+            // Dispatch EnrichBusinessJob (now handles website discovery if NULL)
+            $isDirectory = $website && preg_match('/(?:justdial\.com|sulekha\.com|indiamart\.com|tradeindia\.com|yellowpages\.in|yelp\.com|threebestrated\.in|urbanco\.in)/i', $website);
+
+            if (! $isDirectory) {
                 EnrichBusinessJob::dispatch($business->id)->onQueue('default');
             }
 

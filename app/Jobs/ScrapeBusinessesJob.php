@@ -47,6 +47,7 @@ class ScrapeBusinessesJob implements ShouldQueue
                 'keyword' => $this->scrapingJob->keyword,
                 'city' => $this->scrapingJob->location,
                 'job_id' => $this->scrapingJob->id,
+                'limit' => $this->scrapingJob->limit ?? 100,
             ]);
 
             $this->scrapingJob->refresh();
