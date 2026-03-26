@@ -1,0 +1,88 @@
+<?php
+
+namespace App\Services;
+
+use App\Jobs\EnrichBusinessJob;
+use App\Models\Business;
+use App\Scrapers\Parsers\BusinessParser;
+use App\Scrapers\Spiders\BusinessEnrichmentSpider;
+use Illuminate\Support\Facades\Log;
+use RoachPHP\Roach;
+
+class BusinessService
+{
+    /**
+     * Save a business to the database and trigger enrichment if needed.
+     */
+    public function saveBusiness(array $data, int $jobId, string $city): ?Business
+    {
+        $name = trim($data['name'] ?? '');
+        if (empty($name)) {
+            return null;
+        }
+
+        $website = BusinessParser::cleanWebsiteUrl($data['website'] ?? null);
+        $rawPhone = trim($data['phone'] ?? '');
+        $rawAddress = trim($data['address'] ?? '');
+
+        // Use the parser to clean address and extract/validate phone
+        $cleaned = BusinessParser::cleanGoogleAddress($rawAddress, $rawPhone);
+        $address = $cleaned['address'] ?: $rawAddress;
+        $phone = $cleaned['phone'];
+
+        // Deduplication Hash
+        $hash = Business::generateDedupHash($name, $address ?: $city, $city);
+
+        $source = $data['source'] ?? 'unknown';
+
+        try {
+            $existing = Business::where('dedup_hash', $hash)->first();
+
+            $updateData = [
+                'scraping_job_id' => $jobId,
+                'name' => mb_substr($name, 0, 191),
+                'city' => $city,
+                'source' => $source,
+                'cid' => $data['cid'] ?? null,
+            ];
+
+            if ($address) {
+                $updateData['address'] = $address;
+            }
+            if ($website && (! $existing || ! $existing->website)) {
+                $updateData['website'] = $website;
+            }
+            if ($phone && (! $existing || ! $existing->phone)) {
+                $updateData['phone'] = $phone;
+            }
+            if (isset($data['rating'])) {
+                $updateData['rating'] = $data['rating'];
+            }
+            if (isset($data['reviews_count'])) {
+                $updateData['reviews_count'] = $data['reviews_count'];
+            }
+            if (isset($data['latitude'])) {
+                $updateData['latitude'] = $data['latitude'];
+            }
+            if (isset($data['longitude'])) {
+                $updateData['longitude'] = $data['longitude'];
+            }
+
+            $business = Business::updateOrCreate(
+                ['dedup_hash' => $hash],
+                $updateData
+            );
+
+            // Dispatch EnrichBusinessJob if website exists
+            if ($website && ! preg_match('/(?:justdial\.com|sulekha\.com|indiamart\.com|tradeindia\.com|yellowpages\.in|yelp\.com|threebestrated\.in|urbanco\.in)/i', $website)) {
+                EnrichBusinessJob::dispatch($business->id)->onQueue('default');
+            }
+
+            return $business;
+        } catch (\Exception $e) {
+            Log::error("Failed to save business: {$name}", ['error' => $e->getMessage()]);
+
+            return null;
+        }
+    }
+}

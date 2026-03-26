@@ -160,6 +160,6 @@ class BusinessEnrichmentSpider extends BasicSpider
             }
         });
 
-        return array_values(array_unique(array_slice($links, 0, 3)));
+        return array_values(array_unique(array_slice($links, 0, 5)));
     }
 }

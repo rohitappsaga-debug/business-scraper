@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\ScrapingJob;
 use App\Scrapers\Spiders\BusinessSpider;
+use App\Scrapers\Spiders\GoogleLocalSpider;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
@@ -32,15 +33,40 @@ class ScrapeBusinessesJob implements ShouldQueue
             return;
         }
 
-        Log::info('Starting Roach scrape job', [
-            'job_id' => $this->scrapingJob->id,
-            'keyword' => $this->scrapingJob->keyword,
-            'location' => $this->scrapingJob->location,
-        ]);
-
         $this->scrapingJob->markAsRunning();
 
         try {
+            Log::info('Starting Google Local free search', [
+                'job_id' => $this->scrapingJob->id,
+                'keyword' => $this->scrapingJob->keyword,
+                'location' => $this->scrapingJob->location,
+            ]);
+
+            // 1. Primary Source: Google Local Scraper (Free)
+            Roach::startSpider(GoogleLocalSpider::class, context: [
+                'keyword' => $this->scrapingJob->keyword,
+                'city' => $this->scrapingJob->location,
+                'job_id' => $this->scrapingJob->id,
+            ]);
+
+            $this->scrapingJob->refresh();
+            $savedCount = $this->scrapingJob->businesses()->count();
+
+            if ($savedCount > 0) {
+                $this->scrapingJob->markAsCompleted($savedCount);
+                Log::info('Google Local search completed successfully', [
+                    'job_id' => $this->scrapingJob->id,
+                    'saved' => $savedCount,
+                ]);
+
+                return;
+            }
+
+            // 2. Fallback: Roach Spiders (JustDial, Sulekha etc.)
+            Log::info('Google Local returned 0 results. Falling back to Roach spiders.', [
+                'job_id' => $this->scrapingJob->id,
+            ]);
+
             Roach::startSpider(BusinessSpider::class, context: [
                 'keyword' => $this->scrapingJob->keyword,
                 'city' => $this->scrapingJob->location,
@@ -50,7 +76,7 @@ class ScrapeBusinessesJob implements ShouldQueue
             $this->scrapingJob->refresh();
 
             if ($this->scrapingJob->isCancelled()) {
-                Log::info('Scrape job was cancelled during execution', [
+                Log::info('Scrape job was cancelled during fallback execution', [
                     'job_id' => $this->scrapingJob->id,
                 ]);
 
@@ -60,7 +86,7 @@ class ScrapeBusinessesJob implements ShouldQueue
             $savedCount = $this->scrapingJob->businesses()->count();
             $this->scrapingJob->markAsCompleted($savedCount);
 
-            Log::info('Roach scrape job completed', [
+            Log::info('Fallback scrape job completed', [
                 'job_id' => $this->scrapingJob->id,
                 'saved' => $savedCount,
             ]);
