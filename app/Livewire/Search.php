@@ -39,7 +39,7 @@ class Search extends Component
             'keyword' => $this->keyword,
             'location' => $this->location,
             'radius' => 25,
-            'source' => 'roach',
+            'source' => 'Hybrid_enriched_v3',
             'limit' => $this->limit,
             'status' => 'pending',
         ]);

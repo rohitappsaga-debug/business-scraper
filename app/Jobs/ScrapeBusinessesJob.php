@@ -3,94 +3,73 @@
 namespace App\Jobs;
 
 use App\Models\ScrapingJob;
-use App\Scrapers\Spiders\BusinessSpider;
-use App\Scrapers\Spiders\GoogleLocalSpider;
+use App\Services\BusinessService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
-use RoachPHP\Roach;
 use Throwable;
 
 class ScrapeBusinessesJob implements ShouldQueue
 {
     use Queueable;
 
-    public int $timeout = 600;
+    public int $timeout = 1800;
 
     public int $tries = 1;
 
     public function __construct(public readonly ScrapingJob $scrapingJob) {}
 
-    public function handle(): void
+    public function handle(BusinessService $businessService): void
     {
         $this->scrapingJob->refresh();
-
         if ($this->scrapingJob->isCancelled()) {
-            Log::info('Scrape job was cancelled before execution', [
-                'job_id' => $this->scrapingJob->id,
-            ]);
-
             return;
         }
-
         $this->scrapingJob->markAsRunning();
 
         try {
-            Log::info('Starting Google Local free search', [
-                'job_id' => $this->scrapingJob->id,
-                'keyword' => $this->scrapingJob->keyword,
-                'location' => $this->scrapingJob->location,
-            ]);
+            $keyword = $this->scrapingJob->keyword;
+            $city = $this->scrapingJob->location;
 
-            // 1. Primary Source: Google Local Scraper (Free)
-            Roach::startSpider(GoogleLocalSpider::class, context: [
-                'keyword' => $this->scrapingJob->keyword,
-                'city' => $this->scrapingJob->location,
-                'job_id' => $this->scrapingJob->id,
-                'limit' => $this->scrapingJob->limit ?? 100,
-            ]);
+            $cliPath = base_path('scraper/cli.js');
+            $command = "node \"{$cliPath}\" \"{$keyword}\" \"{$city}\" 2>&1";
 
-            $this->scrapingJob->refresh();
-            $savedCount = $this->scrapingJob->businesses()->count();
+            Log::info("Executing CLI: {$command}");
 
-            if ($savedCount > 0) {
-                $this->scrapingJob->markAsCompleted($savedCount);
-                Log::info('Google Local search completed successfully', [
-                    'job_id' => $this->scrapingJob->id,
-                    'saved' => $savedCount,
-                ]);
+            $output = [];
+            $returnCode = 0;
+            exec($command, $output, $returnCode);
 
-                return;
+            $rawOutput = implode('', $output);
+
+            // ⭐ FIX: Extract JSON from output (ignoring logs)
+            preg_match('/({.*})/s', $rawOutput, $matches);
+            $jsonString = $matches[1] ?? '';
+
+            $result = json_decode($jsonString, true);
+
+            if (! $result || ! isset($result['success'])) {
+                throw new \Exception('Failed to parse JSON from scraper output. Raw: '.substr($rawOutput, -500));
             }
 
-            // 2. Fallback: Roach Spiders (JustDial, Sulekha etc.)
-            Log::info('Google Local returned 0 results. Falling back to Roach spiders.', [
-                'job_id' => $this->scrapingJob->id,
-            ]);
-
-            Roach::startSpider(BusinessSpider::class, context: [
-                'keyword' => $this->scrapingJob->keyword,
-                'city' => $this->scrapingJob->location,
-                'job_id' => $this->scrapingJob->id,
-            ]);
-
-            $this->scrapingJob->refresh();
-
-            if ($this->scrapingJob->isCancelled()) {
-                Log::info('Scrape job was cancelled during fallback execution', [
-                    'job_id' => $this->scrapingJob->id,
-                ]);
-
-                return;
+            if (! $result['success']) {
+                throw new \Exception('Scraper failed: '.($result['error'] ?? 'Unknown error'));
             }
 
+            $enrichedResults = $result['data'] ?? [];
+            foreach ($enrichedResults as $bizData) {
+                $businessService->saveBusiness(
+                    array_merge($bizData, ['source' => 'Hybrid_enriched_v3']),
+                    $this->scrapingJob->id,
+                    $city
+                );
+            }
+
+            $this->scrapingJob->refresh();
             $savedCount = $this->scrapingJob->businesses()->count();
             $this->scrapingJob->markAsCompleted($savedCount);
 
-            Log::info('Fallback scrape job completed', [
-                'job_id' => $this->scrapingJob->id,
-                'saved' => $savedCount,
-            ]);
+            Log::info('Hybrid Enriched Scrape completed successfully', ['job_id' => $this->scrapingJob->id, 'saved' => $savedCount]);
         } catch (Throwable $e) {
             $this->failed($e);
             throw $e;
@@ -99,11 +78,7 @@ class ScrapeBusinessesJob implements ShouldQueue
 
     public function failed(Throwable $exception): void
     {
-        Log::error('Scrape job failed', [
-            'job_id' => $this->scrapingJob->id,
-            'error' => $exception->getMessage(),
-        ]);
-
+        Log::error('Scrape job failed', ['job_id' => $this->scrapingJob->id, 'error' => $exception->getMessage()]);
         $this->scrapingJob->markAsFailed($exception->getMessage());
     }
 }

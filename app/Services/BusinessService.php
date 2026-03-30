@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Jobs\EnrichBusinessJob;
 use App\Models\Business;
+use App\Models\BusinessEmail;
+use App\Models\SocialLink;
 use App\Scrapers\Parsers\BusinessParser;
 use Illuminate\Support\Facades\Log;
 
@@ -23,14 +25,11 @@ class BusinessService
         $rawPhone = trim($data['phone'] ?? '');
         $rawAddress = trim($data['address'] ?? '');
 
-        // Use the parser to clean address and extract/validate phone
         $cleaned = BusinessParser::cleanGoogleAddress($rawAddress, $rawPhone);
         $address = $cleaned['address'] ?: $rawAddress;
         $phone = $cleaned['phone'];
 
-        // Deduplication Hash
         $hash = Business::generateDedupHash($name, $address ?: $city, $city);
-
         $source = $data['source'] ?? 'unknown';
 
         try {
@@ -53,6 +52,10 @@ class BusinessService
             if ($phone && (! $existing || ! $existing->phone)) {
                 $updateData['phone'] = $phone;
             }
+
+            if (isset($data['category'])) {
+                $updateData['category'] = $data['category'];
+            }
             if (isset($data['rating'])) {
                 $updateData['rating'] = $data['rating'];
             }
@@ -66,13 +69,31 @@ class BusinessService
                 $updateData['longitude'] = $data['longitude'];
             }
 
-            $business = Business::updateOrCreate(
-                ['dedup_hash' => $hash],
-                $updateData
-            );
+            $business = Business::updateOrCreate(['dedup_hash' => $hash], $updateData);
 
-            // Dispatch EnrichBusinessJob (now handles website discovery if NULL)
-            $isDirectory = $website && preg_match('/(?:justdial\.com|sulekha\.com|indiamart\.com|tradeindia\.com|yellowpages\.in|yelp\.com|threebestrated\.in|urbanco\.in)/i', $website);
+            // Save emails
+            if (! empty($data['email']) && is_array($data['email'])) {
+                foreach ($data['email'] as $email) {
+                    BusinessEmail::firstOrCreate([
+                        'business_id' => $business->id,
+                        'email' => strtolower(trim($email)),
+                    ]);
+                }
+            }
+
+            // Save social links
+            if (! empty($data['socials']) && is_array($data['socials'])) {
+                foreach ($data['socials'] as $platform => $url) {
+                    if ($url) {
+                        SocialLink::updateOrCreate(
+                            ['business_id' => $business->id, 'platform' => $platform],
+                            ['url' => $url, 'is_active' => true]
+                        );
+                    }
+                }
+            }
+
+            $isDirectory = $website && preg_match("/(?:justdial\.com|sulekha\.com|indiamart\.com|tradeindia\.com|yellowpages\.in|yelp\.com|threebestrated\.in|urbanco\.in)/i", $website);
 
             if (! $isDirectory) {
                 EnrichBusinessJob::dispatch($business->id)->onQueue('default');
