@@ -95,7 +95,8 @@ class BusinessService
 
             $isDirectory = $website && preg_match("/(?:justdial\.com|sulekha\.com|indiamart\.com|tradeindia\.com|yellowpages\.in|yelp\.com|threebestrated\.in|urbanco\.in)/i", $website);
 
-            if (! $isDirectory) {
+            // ⭐ Optimization: Only dispatch enrichment if it's a new business or website changed
+            if (! $isDirectory && ($business->wasRecentlyCreated || $business->wasChanged('website'))) {
                 EnrichBusinessJob::dispatch($business->id)->onQueue('default');
             }
 

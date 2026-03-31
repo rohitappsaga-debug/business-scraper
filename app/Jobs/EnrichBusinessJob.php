@@ -6,6 +6,7 @@ use App\Models\Business;
 use App\Scrapers\Spiders\BusinessEnrichmentSpider;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Http\Client\Promises\LazyPromise;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RoachPHP\Roach;
@@ -16,26 +17,41 @@ class EnrichBusinessJob implements ShouldQueue
 {
     use Queueable;
 
-    public int $timeout = 300;
+    public int $timeout = 600;
 
     public int $tries = 3;
+
+    public function backoff(): array
+    {
+        return [60, 300, 600];
+    }
 
     public function __construct(public readonly int $businessId) {}
 
     public function handle(): void
     {
-        $business = Business::find($this->businessId);
+        $business = Business::with(['socialLinks', 'businessEmails'])->find($this->businessId);
 
         if (! $business) {
             return;
         }
 
-        if (! $business->website) {
+        // Optimization: If enrichment is already mostly complete from another job/process, skip to prevent loop
+        if ($business->socialLinks()->count() > 0 && $business->businessEmails()->count() > 0) {
+            Log::info("EnrichBusinessJob: Already enriched {$business->name}. Skipping.");
+
+            return;
+        }
+
+        // Ensure the website is a technically valid URL before starting the spider
+        $isValidUrl = $business->website && filter_var($business->website, FILTER_VALIDATE_URL) && ! str_contains($business->website, '///');
+
+        if (! $isValidUrl) {
             $this->discoverWebsite($business);
         }
 
-        if (! $business->website) {
-            Log::info("EnrichBusinessJob: No website found after discovery for {$business->name}. Skipping.");
+        if (! $business->website || ! filter_var($business->website, FILTER_VALIDATE_URL) || str_contains($business->website, '///')) {
+            Log::info("EnrichBusinessJob: No valid website found after discovery for {$business->name}. Skipping.");
 
             return;
         }
@@ -68,7 +84,7 @@ class EnrichBusinessJob implements ShouldQueue
                 'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
             ])->get($url);
 
-            if ($response instanceof \Illuminate\Http\Client\Promises\LazyPromise) {
+            if ($response instanceof LazyPromise) {
                 $response = $response->wait();
             }
 
@@ -78,7 +94,7 @@ class EnrichBusinessJob implements ShouldQueue
                 // Google search results often have links in 'div.g' or h3 a
                 $website = $crawler->filter('#search a')->each(function (Crawler $link) {
                     $href = $link->attr('href');
-                    if (! $href || ! str_starts_with($href, 'http') || str_contains($href, 'google.com') || str_contains($href, 'webcache') || str_contains($href, 'youtube.com')) {
+                    if (! $href || ! filter_var($href, FILTER_VALIDATE_URL) || ! str_starts_with($href, 'http') || str_contains($href, 'google.com') || str_contains($href, 'webcache') || str_contains($href, 'youtube.com') || str_contains($href, '///')) {
                         return null;
                     }
 
