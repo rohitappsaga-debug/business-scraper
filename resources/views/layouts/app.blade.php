@@ -3,6 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="csrf-token" content="{{ csrf_token() }}">
 
         <title>{{ $title ?? config('app.name') }}</title>
 
@@ -20,6 +21,7 @@
             }
         </script>
 
+        @livewireStyles
     </head>
     <body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100">
         {{ $slot }}
@@ -168,5 +170,6 @@
         <style>
             [x-cloak] { display: none !important; }
         </style>
+        @livewireScripts
     </body>
 </html>

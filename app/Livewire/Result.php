@@ -6,11 +6,14 @@ use App\Jobs\ScrapeBusinessesJob;
 use App\Models\ScrapingJob;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\View\View;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 class Result extends Component
 {
+    use WithPagination;
     public function rerunJob(int $jobId): void
     {
         $job = ScrapingJob::find($jobId);
@@ -41,13 +44,12 @@ class Result extends Component
         session()->flash('message', 'Job #'.$job->id.' has been cancelled.');
     }
 
-    public function getJobsProperty(): LengthAwarePaginator
+    #[Computed]
+    public function jobs(): LengthAwarePaginator
     {
-        $page = (int) request()->get('page', 1);
-
         return ScrapingJob::query()
             ->orderByDesc('created_at')
-            ->paginate(10, ['*'], 'page', $page);
+            ->paginate(10);
     }
 
     public function confirmLogout(): void

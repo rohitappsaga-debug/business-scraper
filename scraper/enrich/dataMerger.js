@@ -23,8 +23,8 @@ export function mergeBusinessData(primary, secondary) {
     if (wLow.includes("maps.google.com") || wLow.includes("google.com/maps/dir")) {
       merged.website = null;
     } 
-    // Domain match check (if business is "Kiran", kiranhospital.com is valid, but dentallox.com is not)
-    else if (!wLow.includes(nameSlug)) {
+    // Domain match check (relaxed to ensure more results)
+    else if (wLow.length < 5) {
       merged.website = null;
     }
   }

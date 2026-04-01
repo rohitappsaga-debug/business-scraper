@@ -1,7 +1,7 @@
 import { logger } from "../utils/logger.js";
 import { scrapeWithPlaywright } from "../playwrightAdapter.js";
 
-export async function enrichWithJustdial(name, city) {
+export async function enrichWithJustdial(name, city, browser = null) {
   if (!name || name.length < 2) return null;
   
   try {
@@ -9,7 +9,8 @@ export async function enrichWithJustdial(name, city) {
       keyword: name,
       city: city,
       headless: true,
-      timeout: 15000 
+      timeout: 15000,
+      browser: browser
     });
     
     if (result.success && Array.isArray(result.data) && result.data.length > 0) {

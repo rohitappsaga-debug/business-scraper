@@ -16,14 +16,18 @@ export async function scrapeWithPlaywright({
   city, 
   headless = true, 
   timeout = 30000,
-  proxy = null
+  proxy = null,
+  browser: existingBrowser = null
 }) {
-  let browser;
-  try {
-    const launchOptions = { headless };
-    if (proxy && proxy.server) { launchOptions.proxy = proxy; }
+  let browser = existingBrowser;
+  const shouldCloseBrowser = !existingBrowser;
 
-    browser = await chromium.launch(launchOptions);
+  try {
+    if (!browser) {
+      const launchOptions = { headless };
+      if (proxy && proxy.server) { launchOptions.proxy = proxy; }
+      browser = await chromium.launch(launchOptions);
+    }
     
     // Custom context with realistic screen size
     const context = await browser.newContext({

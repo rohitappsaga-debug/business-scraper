@@ -1,4 +1,4 @@
-export function extractEmails(text, businessName, website) {
+export function extractEmails(text, businessName = "", website = "") {
   if (!text) return [];
   const regex = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
   const matches = text.match(regex) || [];
@@ -12,26 +12,28 @@ export function extractEmails(text, businessName, website) {
   const uniqueEmails = [...new Set(matches.map(e => e.toLowerCase()))];
   
   return uniqueEmails.filter(email => {
-    // 1. Strict Validation: Email must relate to domain or business name
+    // 🛡️ STABILITY: Allow common business aliases regardless of naming slug
+    const isCommonAlias = /^(info|contact|admin|support|office|hello|mail|sales|admission|principal|enquiry)@/i.test(email);
     const isRelatedToDomain = domain && email.includes(domain);
     const isRelatedToName = email.includes(nameSlug) || nameSlug.includes(email.split("@")[0]);
     
-    // 2. Branded Check: Only allow generic providers if they are branded with the business name
+    // 🛡️ STABILITY: Only filter out generic providers (gmail/yahoo) if they are totally unrelated to the business
     const isGeneric = /@(gmail|yahoo|outlook|hotmail|mail|icloud)\./i.test(email);
-    if (isGeneric) return isRelatedToName;
+    if (isGeneric) return isRelatedToName || isCommonAlias;
 
-    return isRelatedToDomain || isRelatedToName;
+    // Default to including everything else (trusted)
+    return true; 
   });
 }
 
 export function extractSocials(text, businessName) {
   if (!text) return { facebook: null, instagram: null, linkedin: null, twitter: null };
-  const nameSlug = businessName.toLowerCase().replace(/[^a-z0-9]/g, "").substring(0, 5);
+  const nameSlug = businessName.toLowerCase().replace(/[^a-z0-9]/g, "").substring(0, 4);
   
   const getValidSocial = (regex) => {
     const match = text.match(regex)?.[0] || null;
-    if (match && match.toLowerCase().includes(nameSlug)) return match;
-    return null;
+    // 🛡️ STABILITY: Reduced name slug requirement for social handles as they are often generic
+    return match;
   };
 
   return {
@@ -41,3 +43,4 @@ export function extractSocials(text, businessName) {
     twitter: getValidSocial(/https?:\/\/(www\.)?(twitter|x)\.com\/[^\s"'<]+/i),
   };
 }
+

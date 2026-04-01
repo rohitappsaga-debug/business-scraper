@@ -4,18 +4,12 @@ import { extractEmails, extractSocials } from "./emailExtractor.js";
 
 /**
  * Fast Website Crawler with Strict Timeouts.
+ * Each call launches its own isolated browser to avoid conflicts with shared instances.
  */
-export async function crawlWebsite(url, browserInstance = null) {
+export async function crawlWebsite(url, businessName = "") {
   if (!url || !url.startsWith("http")) return { emails: [], socials: { facebook: null, instagram: null, linkedin: null, twitter: null } };
   
-  let browser = browserInstance;
-  let shouldCloseBrowser = false;
-  
-  if (!browser) {
-    browser = await chromium.launch({ headless: true });
-    shouldCloseBrowser = true;
-  }
-  
+  const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext();
   const page = await context.newPage();
   let textContent = "";
@@ -25,28 +19,36 @@ export async function crawlWebsite(url, browserInstance = null) {
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 10000 });
     textContent += await page.content();
     
-    // Find contact/about pages
-    const contactLinks = await page.$$eval("a", links => 
-      links.map(l => l.href).filter(h => h.toLowerCase().includes("contact") || h.toLowerCase().includes("about"))
-    );
+    // Find contact/about/legal/policy pages (where emails often hide)
+    const deepLinks = await page.$$eval("a", (links, origin) => {
+      return links
+        .map(l => l.href)
+        .filter(h => h.startsWith(origin)) // Only internal links
+        .filter(h => {
+          const l = h.toLowerCase();
+          return l.includes("contact") || l.includes("about") || l.includes("legal") || l.includes("policy") || l.includes("terms");
+        });
+    }, new URL(url).origin);
     
-    const pagesToVisit = [...new Set(contactLinks)].slice(0, 1); // Only visit 1 deep link for speed
+    const pagesToVisit = [...new Set(deepLinks)].slice(0, 2); // Visit up to 2 deep links
     
-    // Phase 2: Deep Link (Strict 8s timeout)
+    // Phase 2: Deep Links (Strict 8s timeout each)
     for (const link of pagesToVisit) {
       try {
         await page.goto(link, { waitUntil: "domcontentloaded", timeout: 8000 });
-        textContent += await page.content();
-      } catch (e) {
-        // Ignore deep link timeout
-      }
+        textContent += " " + await page.content();
+      } catch (e) {}
     }
   } catch (e) {
-    // Fail silently on main timeout to keep concurrency flowing
+    // Fail silently on main timeout
   } finally {
     await page.close();
-    if (shouldCloseBrowser) await browser.close();
+    await context.close().catch(() => {});
+    await browser.close().catch(() => {});
   }
   
-  return { emails: extractEmails(textContent), socials: extractSocials(textContent) };
+  return { 
+    emails: extractEmails(textContent, businessName, url), 
+    socials: extractSocials(textContent, businessName) 
+  };
 }

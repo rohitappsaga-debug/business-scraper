@@ -28,55 +28,66 @@ class RunRoachScraper extends Command
 
         try {
             $cliPath = base_path('scraper/cli.js');
-            $command = "node \"{$cliPath}\" \"{$keyword}\" \"{$city}\" 2>&1";
+            $command = "node \"{$cliPath}\" \"{$keyword}\" \"{$city}\"";
 
-            $this->info("Executing CLI: {$command}");
+            $this->info("Executing Streaming CLI: {$command}");
 
-            $output = [];
-            $returnCode = 0;
-            exec($command, $output, $returnCode);
+            $descriptorspec = [
+                0 => ['pipe', 'r'], // stdin
+                1 => ['pipe', 'w'], // stdout
+                2 => ['pipe', 'w'],  // stderr
+            ];
 
-            // Get exactly one JSON line
-            $rawOutput = implode('', $output);
+            $process = proc_open($command, $descriptorspec, $pipes);
 
-            // ⭐ ACCURACY: Ensure we parse only the JSON block
-            preg_match('/({.*})/s', $rawOutput, $matches);
-            $jsonString = $matches[1] ?? '';
+            if (is_resource($process)) {
+                $count = 0;
+                // Read stdout line by line
+                while (! feof($pipes[1])) {
+                    $line = fgets($pipes[1]);
+                    if (! $line) {
+                        continue;
+                    }
 
-            $result = json_decode($jsonString, true);
+                    // 💡 NEW: Stream Row Detection
+                    if (str_contains($line, '_STREAM_ROW_:')) {
+                        $json = str_replace('_STREAM_ROW_:', '', $line);
+                        $bizData = json_decode($json, true);
 
-            if (! $result || ! isset($result['success'])) {
-                $this->error('Invalid output from Node.js scraper: '.substr($rawOutput, -500));
-                $job->markAsFailed('Invalid JSON');
+                        if ($bizData) {
+                            $businessService->saveBusiness(
+                                array_merge($bizData, ['source' => 'Hybrid_enriched_v3']),
+                                $job->id,
+                                $city
+                            );
 
-                return 1;
+                            $job->increment('results_count');
+                            $count++;
+                            $this->line("Discovered: {$bizData['name']}");
+                        }
+                    }
+
+                    // Final Completion Detection (optional fallback)
+                    if (str_contains($line, '_JSON_START_')) {
+                        // Final summary logic here if needed
+                    }
+                }
+
+                fclose($pipes[0]);
+                fclose($pipes[1]);
+                fclose($pipes[2]);
+                proc_close($process);
+
+                $job->refresh();
+                $savedCount = $job->businesses()->count();
+                $job->markAsCompleted($savedCount);
+
+                $this->info("Success! Saved {$savedCount} businesses.");
+
+                return 0;
             }
 
-            if (! $result['success']) {
-                $this->error('Scraper reported error: '.($result['error'] ?? 'Unknown'));
-                $job->markAsFailed($result['error']);
-
-                return 1;
-            }
-
-            $enrichedResults = $result['data'] ?? [];
-            $this->info('Scraper returned '.count($enrichedResults).' high-quality results.');
-
-            foreach ($enrichedResults as $bizData) {
-                $businessService->saveBusiness(
-                    array_merge($bizData, ['source' => 'Hybrid_enriched_v3']),
-                    $job->id,
-                    $city
-                );
-            }
-
-            $job->refresh();
-            $savedCount = $job->businesses()->count();
-            $job->markAsCompleted($savedCount);
-
-            $this->info("Success! Saved {$savedCount} businesses.");
-
-            return 0;
+            return 1;
 
         } catch (\Exception $e) {
             $this->error('Critical Failed: '.$e->getMessage());

@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -24,6 +25,8 @@ class AppServiceProvider extends ServiceProvider
         Schema::defaultStringLength(191);
 
         if (app()->environment('local')) {
+            URL::forceRootUrl(config('app.url'));
+
             Http::globalOptions([
                 'verify' => 'D:/wamp64/bin/php/php8.5.0/cacert.pem',
             ]);

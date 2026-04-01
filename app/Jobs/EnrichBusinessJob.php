@@ -36,8 +36,8 @@ class EnrichBusinessJob implements ShouldQueue
             return;
         }
 
-        // Optimization: If enrichment is already mostly complete from another job/process, skip to prevent loop
-        if ($business->socialLinks()->count() > 0 && $business->businessEmails()->count() > 0) {
+        // Optimization: If enrichment is already comprehensive, skip.
+        if ($business->businessEmails()->exists() && $business->socialLinks()->exists()) {
             Log::info("EnrichBusinessJob: Already enriched {$business->name}. Skipping.");
 
             return;

@@ -22,6 +22,23 @@ class ScrapingJob extends Model
         'limit',
     ];
 
+    /**
+     * The "booted" method of the model.
+     */
+    protected static function booted(): void
+    {
+        static::created(function ($job) {
+            \Illuminate\Support\Facades\Log::info("ScrapingJob #{$job->id} created automatically!", [
+                'keyword' => $job->keyword,
+                'location' => $job->location,
+                'source' => $job->source,
+                'backtrace' => collect(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 15))
+                    ->map(fn($item) => ($item['file'] ?? 'internal') . ':' . ($item['line'] ?? '?'))
+                    ->toArray()
+            ]);
+        });
+    }
+
     public function casts(): array
     {
         return [

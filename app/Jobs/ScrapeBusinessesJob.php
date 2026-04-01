@@ -4,11 +4,9 @@ namespace App\Jobs;
 
 use App\Models\ScrapingJob;
 use App\Services\BusinessService;
-use Illuminate\Bus\Batch;
 use Illuminate\Bus\Batchable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -97,63 +95,60 @@ class ScrapeBusinessesJob implements ShouldQueue
             $city = $this->location ?? $this->scrapingJob->location;
 
             $cliPath = base_path('scraper/cli.js');
-            $command = "node \"{$cliPath}\" \"{$keyword}\" \"{$city}\" 2>&1";
+            $command = "node \"{$cliPath}\" \"{$keyword}\" \"{$city}\"";
 
-            Log::info("Executing CLI: {$command}");
+            Log::info("Executing Streaming CLI: {$command}");
 
-            $output = [];
-            $returnCode = 0;
-            exec($command, $output, $returnCode);
+            $descriptorspec = [
+                0 => ['pipe', 'r'], // stdin
+                1 => ['pipe', 'w'], // stdout
+                2 => ['pipe', 'w'],  // stderr
+            ];
 
-            $rawOutput = implode('', $output);
+            $process = proc_open($command, $descriptorspec, $pipes);
 
-            preg_match('/({.*})/s', $rawOutput, $matches);
-            $jsonString = $matches[1] ?? '';
+            if (is_resource($process)) {
+                // Read stdout line by line
+                while (! feof($pipes[1])) {
+                    $line = fgets($pipes[1]);
+                    if (! $line) {
+                        continue;
+                    }
 
-            $result = json_decode($jsonString, true);
+                    // 💡 NEW: Stream Row Detection
+                    if (str_contains($line, '_STREAM_ROW_:')) {
+                        $json = str_replace('_STREAM_ROW_:', '', $line);
+                        $bizData = json_decode($json, true);
 
-            if (! $result || ! isset($result['success'])) {
-                throw new \Exception('Failed to parse JSON from scraper output. Raw: '.substr($rawOutput, -500));
-            }
+                        if ($bizData) {
+                            $savedBiz = $businessService->saveBusiness(
+                                array_merge($bizData, ['source' => 'Hybrid_enriched_v3']),
+                                $this->scrapingJob?->id ?? 0,
+                                $city
+                            );
 
-            if (! $result['success']) {
-                throw new \Exception('Scraper failed: '.($result['error'] ?? 'Unknown error'));
-            }
+                            // 💡 OPTIMIZATION: Only increment count if it was a new business
+                            // This prevents double-counting when Phase 2 enriches Phase 1 results
+                            if ($this->scrapingJob && $savedBiz && $savedBiz->wasRecentlyCreated) {
+                                $this->scrapingJob->increment('results_count');
+                            }
+                        }
+                    }
 
-            $enrichedResults = $result['data'] ?? [];
-
-            // ⭐ FIX: Split results into chunks and dispatch as a BATCH
-            if (! empty($enrichedResults)) {
-                $chunks = array_chunk($enrichedResults, 20);
-                $jobs = [];
-
-                foreach ($chunks as $chunk) {
-                    $jobs[] = new self($chunk, $keyword, $city, $this->scrapingJob);
+                    // Final Completion Detection (optional fallback)
+                    if (str_contains($line, '_JSON_START_')) {
+                        // We could capture final summary here if needed
+                    }
                 }
 
-                $jobRef = $this->scrapingJob;
+                fclose($pipes[0]);
+                fclose($pipes[1]);
+                fclose($pipes[2]);
+                proc_close($process);
 
-                Log::info('Dispatching '.count($jobs)." parallel chunk jobs (BATCH) for {$keyword} in {$city}.");
-
-                Bus::batch($jobs)
-                    ->name("Scrape: {$keyword} in {$city}")
-                    ->then(function (Batch $batch) use ($jobRef) {
-                        if ($jobRef) {
-                            $jobRef->refresh();
-                            $jobRef->markAsCompleted($jobRef->businesses()->count());
-                        }
-                    })
-                    ->finally(function (Batch $batch) use ($jobRef) {
-                        // Fallback just in case 'then' didn't trigger correctly
-                        if ($jobRef && ! $jobRef->isCompleted()) {
-                            $jobRef->markAsCompleted($jobRef->businesses()->count());
-                        }
-                    })
-                    ->onQueue('default')
-                    ->dispatch();
-            } else {
                 if ($this->scrapingJob) {
-                    $this->scrapingJob->markAsCompleted(0);
+                    $this->scrapingJob->refresh();
+                    $this->scrapingJob->markAsCompleted($this->scrapingJob->businesses()->count());
                 }
             }
 
