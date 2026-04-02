@@ -8,6 +8,7 @@ use App\Models\ScrapingJob;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\View\View;
+use Livewire\Attributes\Computed;
 use Livewire\Component;
 
 class JobResults extends Component
@@ -18,34 +19,40 @@ class JobResults extends Component
 
     public int $currentPage = 1;
 
-    public int $perPage = 5;
-
-    public ?ScrapingJob $job = null;
+    public int $perPage = 10;
 
     public function mount(int $id): void
     {
         $this->id = $id;
-        $this->job = ScrapingJob::find($id);
 
         if (! $this->job) {
+            session()->flash('error', 'Job #' . $id . ' not found or has been deleted.');
             $this->redirectRoute('result');
-
             return;
         }
     }
 
-    public function getTotalResultsProperty(): int
+    #[Computed]
+    public function job(): ?ScrapingJob
+    {
+        return ScrapingJob::find($this->id);
+    }
+
+    #[Computed]
+    public function totalResults(): int
     {
         return $this->buildQuery()->count();
     }
 
-    public function getTotalPagesProperty(): int
+    #[Computed]
+    public function totalPages(): int
     {
         return max(1, (int) ceil($this->totalResults / $this->perPage));
     }
 
     /** @return Collection<int, Business> */
-    public function getResultsProperty(): Collection
+    #[Computed]
+    public function results(): Collection
     {
         if (! $this->job) {
             return collect();
@@ -59,6 +66,11 @@ class JobResults extends Component
     }
 
     public function updatedSearch(): void
+    {
+        $this->currentPage = 1;
+    }
+
+    public function updatedPerPage(): void
     {
         $this->currentPage = 1;
     }
@@ -101,7 +113,6 @@ class JobResults extends Component
     {
         if (! $this->job) {
             $this->redirectRoute('result');
-
             return;
         }
 
@@ -114,6 +125,10 @@ class JobResults extends Component
 
     public function render(): View
     {
+        if (! $this->job) {
+            abort(404, 'Job not found');
+        }
+
         return view('livewire.job-results', [
             'results' => $this->results,
             'totalResults' => $this->totalResults,
@@ -125,18 +140,27 @@ class JobResults extends Component
 
     private function buildQuery(): Builder
     {
-        $query = Business::query()->where('scraping_job_id', $this->id);
+        $query = Business::query()
+            ->where('scraping_job_id', $this->id)
+            ->select('*')
+            ->selectRaw("
+                (CASE WHEN (email IS NOT NULL AND email != '' AND email != '-') THEN 100 ELSE 0 END +
+                 CASE WHEN (website IS NOT NULL AND website != '' AND website != '-') THEN 50 ELSE 0 END +
+                 CASE WHEN (phone IS NOT NULL AND phone != '' AND phone != '-') THEN 30 ELSE 0 END +
+                 CASE WHEN (EXISTS (SELECT 1 FROM social_links WHERE business_id = businesses.id)) THEN 20 ELSE 0 END) as dynamic_score
+            ");
 
         if (! empty($this->search)) {
             $term = '%'.$this->search.'%';
             $query->where(function (Builder $q) use ($term) {
                 $q->where('name', 'like', $term)
                     ->orWhere('category', 'like', $term)
-                    ->orWhere('email', 'like', $term);
+                    ->orWhere('email', 'like', $term)
+                    ->orWhere('address', 'like', $term);
             });
         }
 
-        return $query->orderByDesc('created_at');
+        return $query->orderByDesc('dynamic_score')->orderByDesc('id');
     }
 
     /** @return array<string, mixed> */

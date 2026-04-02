@@ -5,6 +5,8 @@ import { crawlWebsite } from "./enrich/websiteCrawler.js";
 import { enrichWithJustdial } from "./enrich/justdialEnricher.js";
 import { mergeBusinessData } from "./enrich/dataMerger.js";
 import { logger } from "./utils/logger.js";
+import { scrapeBing } from "./bingAdapter.js";
+import { scrapeOSM } from "./osmAdapter.js";
 
 const config = {
   usePlaywrightFallback: true,
@@ -12,17 +14,27 @@ const config = {
   headless: true,
   proxy: null,
   concurrency: 5,  // 🛡 STABILITY: Safer concurrency for local machines
-  maxResults: 50   // 📈 VOLUME: Balanced result count
+  maxResults: 100  // 📈 VOLUME: Increased for multi-source
 };
+
+/**
+ * Deduplicate raw results from multiple sources.
+ */
+function deduplicateRaw(results) {
+  const seen = new Set();
+  return results.filter(biz => {
+    const key = `${biz.name?.toLowerCase()}|${(biz.phone || biz.address)?.toLowerCase()}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
 
 async function enrichBusiness(biz, city, browser = null, onResult = null) {
   let enrichedBiz = { ...biz, email: biz.email || [], socials: biz.socials || {} };
 
   try {
     // 1. Validated Website Crawl (Accurate source)
-    // NOTE: We do NOT pass the shared browser here. The shared browser is busy
-    // with Google Maps tabs, which causes context conflicts and crashes.
-    // websiteCrawler manages its own isolated browser for stability.
     if (enrichedBiz.website) {
       const crawlData = await crawlWebsite(enrichedBiz.website, enrichedBiz.name);
       enrichedBiz = mergeBusinessData(enrichedBiz, { 
@@ -71,34 +83,46 @@ async function enrichAllBusinesses(businesses, city, browser = null, onResult = 
 
 import { chromium } from "playwright-extra";
 
-export async function scrape({ keyword, city, maxResults = 50, onResult = null }) {
-  let rawData = [];
+export async function scrape({ keyword, city, maxResults = 100, onResult = null }) {
   const browser = await chromium.launch({ headless: config.headless });
 
   try {
-    // PHASE 1: Accurate Bulk Collection (Now uses shared browser)
-    // Phase 1: Discover businesses. onResult is NOT passed here because these
-    // are raw (unenriched) records. We only stream after full enrichment in Phase 2.
-    const gmapResults = await scrapeGoogleMaps(keyword, city, config.headless, browser, maxResults);
+    // PHASE 1: Multi-Source Parallel Collection
+    logger.info(`Starting Multi-Source Scraping: ${keyword} in ${city}`);
     
-    if (gmapResults.length > 0) {
-      rawData = gmapResults.slice(0, config.maxResults);
-    } else {
+    const [gmapResults, bingResults, osmResults] = await Promise.all([
+      scrapeGoogleMaps(keyword, city, config.headless, browser, maxResults).catch(e => []),
+      scrapeBing({ keyword, city, maxResults: 30 }).catch(e => []),
+      scrapeOSM({ keyword, city, maxResults: 30 }).catch(e => [])
+    ]);
+
+    let combinedRaw = [...gmapResults, ...bingResults, ...osmResults];
+    
+    if (combinedRaw.length === 0) {
+      // Fallback to Roach if all else fails
       const roachResult = await scrapeWithRoach({ keyword, city });
       if (roachResult.success) {
-        rawData = roachResult.data.slice(0, config.maxResults);
+        combinedRaw = roachResult.data;
       }
     }
 
-    if (rawData.length === 0) {
-      return [];
+    const rawData = deduplicateRaw(combinedRaw).slice(0, maxResults || config.maxResults);
+
+    logger.info(`Phase 1 Complete: Found ${rawData.length} unique businesses from multiple sources`);
+
+    // 💡 NEW: Stream raw results immediately to Laravel
+    if (onResult) {
+      for (const biz of rawData) {
+        onResult(biz);
+      }
     }
 
-    // PHASE 2: Parallel Enrichment (Now uses shared browser instance)
-    const enrichedData = await enrichAllBusinesses(rawData, city, browser, onResult);
-
-    return enrichedData;
+    // ⚡ OPTIMIZATION: Return raw data immediately.
+    // Deep enrichment (crawling websites, social handles, corporate emails) 
+    // is now offloaded to the background queue to keep discovery high-speed.
+    return rawData;
   } catch (err) {
+    logger.error(`Orchestrator failed: ${err.message}`);
     return { success: false, data: [], error: err.message };
   } finally {
     await browser.close();

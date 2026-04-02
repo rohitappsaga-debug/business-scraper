@@ -67,10 +67,9 @@ class EnrichBusinessJob implements ShouldQueue
                 'business_id' => $business->id,
             ]);
         } catch (Throwable $e) {
-            Log::error("EnrichBusinessJob: Failed for {$business->name}", [
-                'error' => $e->getMessage(),
-            ]);
-            throw $e;
+            Log::warning("EnrichBusinessJob: Enrichment failed for {$business->name} ({$business->id}). Error: {$e->getMessage()}");
+            // 💡 CRITICAL: We don't re-throw to prevent "Failed" job spam, 
+            // as enrichment is a supplementary process.
         }
     }
 

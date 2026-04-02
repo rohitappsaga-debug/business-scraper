@@ -10,7 +10,7 @@
                 <span class="material-symbols-outlined text-lg">arrow_back</span>
                 Back to job list
             </a>
-            <h1 class="text-slate-900 dark:text-white text-3xl font-black leading-tight tracking-[-0.033em]">Results for Job #{{ $job->id }}</h1>
+            <h1 class="text-slate-900 dark:text-white text-3xl font-black leading-tight tracking-[-0.033em]">Results for Job #{{ $this->job->id }}</h1>
             <p class="text-slate-500 dark:text-slate-400 text-base font-normal">Manage and export business leads for this search.</p>
         </div>
         <div class="flex flex-wrap items-center gap-3">
@@ -38,15 +38,15 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <div class="flex flex-col gap-1 rounded-xl p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
             <p class="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">Keyword</p>
-            <p class="text-slate-900 dark:text-white text-xl font-bold">{{ $job->keyword }}</p>
+            <p class="text-slate-900 dark:text-white text-xl font-bold">{{ $this->job->keyword }}</p>
         </div>
         <div class="flex flex-col gap-1 rounded-xl p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
             <p class="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">Location</p>
-            <p class="text-slate-900 dark:text-white text-xl font-bold">{{ $job->location }}</p>
+            <p class="text-slate-900 dark:text-white text-xl font-bold">{{ $this->job->location }}</p>
         </div>
         <div class="flex flex-col gap-1 rounded-xl p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
             <p class="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">Source</p>
-            <p class="text-slate-900 dark:text-white text-xl font-bold">{{ ucfirst($job->source ?? '—') }}</p>
+            <p class="text-slate-900 dark:text-white text-xl font-bold">{{ ucfirst($this->job->source ?? '—') }}</p>
         </div>
         <div class="flex flex-col gap-1 rounded-xl p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
             <p class="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">Results Found</p>
@@ -56,7 +56,7 @@
             <p class="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">Status</p>
             <div class="flex items-center gap-2">
                 @php
-                    $status = $job->status;
+                    $status = $this->job->status;
                     $statusColor = match($status) {
                         'completed' => 'text-emerald-600 dark:text-emerald-400',
                         'failed' => 'text-red-600 dark:text-red-400',
@@ -84,24 +84,88 @@
         </div>
     </div>
 
-    @if ($job->status === 'failed' && $job->error_message)
+    @if ($this->job->status === 'failed' && $this->job->error_message)
         <div class="rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 p-4">
             <p class="text-sm font-semibold text-red-800 dark:text-red-300 mb-1">Why this job failed</p>
-            <p class="text-sm text-red-700 dark:text-red-400">{{ $job->error_message }}</p>
+            <p class="text-sm text-red-700 dark:text-red-400">{{ $this->job->error_message }}</p>
+        </div>
+    @endif
+
+    <!-- ⚡ Premium Live Activity Loader -->
+    @if ($this->job->status === 'running')
+        <div class="relative overflow-hidden rounded-2xl bg-white dark:bg-slate-900 border border-blue-200 dark:border-blue-900/30 shadow-lg p-6 group transition-all">
+            <!-- Animated Background Glow -->
+            <div class="absolute -top-24 -left-24 size-64 bg-blue-500/10 blur-[80px] pointer-events-none transition-all group-hover:bg-blue-500/20"></div>
+            
+            <div class="relative flex flex-col md:flex-row items-center gap-6">
+                <!-- Circular Pulse Loader -->
+                <div class="relative flex items-center justify-center shrink-0">
+                    <div class="absolute size-20 rounded-full border-2 border-blue-500/20 animate-[ping_2s_infinite]"></div>
+                    <div class="absolute size-16 rounded-full border-4 border-blue-500/40 animate-[spin_3s_linear_infinite]"></div>
+                    <div class="z-10 flex size-12 items-center justify-center rounded-full bg-blue-600 text-white shadow-xl shadow-blue-500/20">
+                        <span class="material-symbols-outlined animate-pulse">radar</span>
+                    </div>
+                </div>
+
+                <!-- Status Info -->
+                <div class="flex-1 text-center md:text-left">
+                    <div class="flex items-center justify-center md:justify-start gap-2 mb-1">
+                        <span class="relative flex h-2 w-2">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                        </span>
+                        <h3 class="text-slate-900 dark:text-white text-lg font-black tracking-tight">Active Lead Discovery In Progress</h3>
+                    </div>
+                    <p class="text-slate-500 dark:text-slate-400 text-sm font-medium flex items-center justify-center md:justify-start gap-2">
+                        <span class="material-symbols-outlined text-sm text-blue-500">location_on</span>
+                        @if($this->job->current_location)
+                            Exploring: <span class="text-blue-600 dark:text-blue-400 font-bold decoration-blue-500/30 underline underline-offset-4">{{ $this->job->current_location }}</span>
+                        @else
+                            Initializing geographic expansion and cleaning local buffers...
+                        @endif
+                    </p>
+                </div>
+
+                <!-- Metrics/Activity -->
+                <div class="flex flex-col items-center md:items-end gap-1 px-6 border-l border-slate-100 dark:border-slate-800 hidden lg:flex">
+                    <div class="text-blue-600 dark:text-blue-400 text-2xl font-black">{{ $totalResults }}</div>
+                    <div class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Leads Captured So Far</div>
+                </div>
+            </div>
+            
+            <!-- Bottom Progress Line (Decorative) -->
+            <div class="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-blue-600 via-sky-400 to-transparent w-full animate-[shimmer_2s_infinite]"></div>
         </div>
     @endif
 
     <!-- Results Table Section -->
     <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col">
-        <div class="p-4 border-b border-slate-100 dark:border-slate-800">
+        <div class="flex flex-col md:flex-row items-center justify-between gap-4 p-4 border-b border-slate-100 dark:border-slate-800">
             <label class="flex flex-col min-w-40 h-10 w-full md:max-w-md">
-                <div class="flex w-full flex-1 items-stretch rounded-lg h-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                <div class="flex w-full flex-1 items-stretch rounded-lg h-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus-within:ring-2 focus-within:ring-primary/20 transition-all">
                     <div class="text-slate-500 dark:text-slate-400 flex items-center justify-center pl-3">
                         <span class="material-symbols-outlined text-lg">search</span>
                     </div>
                     <input wire:model.live="search" class="form-input flex w-full min-w-0 flex-1 border-none bg-transparent focus:outline-0 focus:ring-0 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 px-3 text-sm font-normal" placeholder="Filter results by name, email or category..."/>
                 </div>
             </label>
+
+            <!-- Rows Selector -->
+            <div class="flex items-center gap-3 shrink-0 group/row-select">
+                <span class="text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest leading-none">Show</span>
+                <div class="relative flex items-center">
+                    <select wire:model.live="perPage" 
+                        class="h-9 w-20 pl-3 pr-8 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs font-black focus:outline-0 focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer outline-none text-center appearance-none"
+                        style="-webkit-appearance: none; -moz-appearance: none; appearance: none; background-image: none;">
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                    <span class="material-symbols-outlined absolute right-2 text-slate-400 pointer-events-none text-[20px] transition-colors group-hover/row-select:text-primary uppercase tracking-none">unfold_more</span>
+                </div>
+                <span class="text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest leading-none">Rows</span>
+            </div>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
@@ -192,7 +256,22 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="px-4 py-10 text-center text-slate-400 dark:text-slate-600 text-sm">No results found.</td>
+                            <td colspan="8" class="px-4 py-16 text-center">
+                                @if($this->job->status === 'running')
+                                    <div class="flex flex-col items-center justify-center gap-3">
+                                        <div class="size-10 rounded-full border-4 border-slate-200 dark:border-slate-800 border-t-primary animate-spin"></div>
+                                        <div class="flex flex-col gap-1">
+                                            <p class="text-slate-900 dark:text-white text-base font-bold tracking-tight">Initializing Discovery Engine...</p>
+                                            <p class="text-slate-500 dark:text-slate-400 text-sm">We are expanding coordinates and initializing target city buffers. Results will stream in shortly.</p>
+                                        </div>
+                                    </div>
+                                @else
+                                    <div class="flex flex-col items-center justify-center gap-2">
+                                        <span class="material-symbols-outlined text-slate-300 dark:text-slate-700 text-4xl">folder_off</span>
+                                        <p class="text-slate-400 dark:text-slate-600 text-sm font-medium">No results found for this search criteria.</p>
+                                    </div>
+                                @endif
+                            </td>
                         </tr>
                     @endforelse
                 </tbody>

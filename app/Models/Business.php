@@ -33,6 +33,7 @@ class Business extends Model
         'dedup_hash',
         'description',
         'cid',
+        'completeness_score',
     ];
 
     public function casts(): array

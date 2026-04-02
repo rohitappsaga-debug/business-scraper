@@ -19,18 +19,18 @@ export async function crawlWebsite(url, businessName = "") {
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 10000 });
     textContent += await page.content();
     
-    // Find contact/about/legal/policy pages (where emails often hide)
+    // Find contact/about/legal/social/team/follow pages
     const deepLinks = await page.$$eval("a", (links, origin) => {
       return links
         .map(l => l.href)
         .filter(h => h.startsWith(origin)) // Only internal links
         .filter(h => {
           const l = h.toLowerCase();
-          return l.includes("contact") || l.includes("about") || l.includes("legal") || l.includes("policy") || l.includes("terms");
+          return l.includes("contact") || l.includes("about") || l.includes("legal") || l.includes("social") || l.includes("team") || l.includes("follow");
         });
     }, new URL(url).origin);
     
-    const pagesToVisit = [...new Set(deepLinks)].slice(0, 2); // Visit up to 2 deep links
+    const pagesToVisit = [...new Set(deepLinks)].slice(0, 3); // Visit up to 3 deep links
     
     // Phase 2: Deep Links (Strict 8s timeout each)
     for (const link of pagesToVisit) {

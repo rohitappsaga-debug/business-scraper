@@ -39,20 +39,76 @@ class ScrapeBusinessesJob implements ShouldQueue
             $this->keyword = $keyword;
             $this->location = $location;
             $this->scrapingJob = $scrapingJob;
-            // Shorter timeout for individual chunks
+            // Shorter timeout for individual chunks (now increased for multi-source)
             if (! empty($leads)) {
-                $this->timeout = 300;
+                $this->timeout = 1800; // Increased to 30 mins to avoid timeouts on large cities
             }
         }
     }
 
-    public function handle(BusinessService $businessService): void
+    public function handle(BusinessService $businessService, \App\Services\GeoExpansionService $geoService): void
     {
         // Backward compatibility: If we received an old job structure from a previous queue state
         if (! $this->leads && ! $this->keyword && ! $this->scrapingJob) {
             Log::warning('ScrapeBusinessesJob: Legacy or invalid job encountered. Skipping to prevent failure loop.');
 
             return;
+        }
+
+        // ============================================
+        // MODE 0: GEO EXPANDER (New)
+        // 💡 CRITICAL: Only expand if NOT already in a batch (to prevent infinite loops)
+        // ============================================
+        if ($this->batch() === null && $this->scrapingJob && ! $this->leads && $this->location === $this->scrapingJob->location) {
+            // Check if this is the first execution (to prevent infinite expansion loops)
+            // We'll use a simple check: if it's a COUNTRY/STATE and we haven't dispatched a batch yet.
+            // For now, let's just use the expansion service.
+            $keyword = $this->scrapingJob->keyword;
+            $location = $this->scrapingJob->location;
+
+            $subQueries = $geoService->expand($location);
+
+            if (! empty($subQueries)) {
+                Log::info("Expanding '{$location}' into " . count($subQueries) . " sub-queries for keyword '{$keyword}'");
+                
+                $this->scrapingJob->markAsRunning();
+                
+                $jobs = collect($subQueries)->map(function ($q) use ($keyword) {
+                    // Create a sub-job for each location
+                    return new self(null, $keyword, $q['location'], $this->scrapingJob);
+                });
+
+                $jobId = $this->scrapingJob->id;
+                $batch = \Illuminate\Support\Facades\Bus::batch($jobs->toArray())
+                    ->name("Scraping for {$keyword} in {$location}")
+                    ->allowFailures() // Don't kill the whole search if one city fails
+                    ->catch(function ($batch, Throwable $e) use ($jobId) {
+                        $job = \App\Models\ScrapingJob::find($jobId);
+                        if ($job) {
+                            Log::error("Batch part failed for Job #{$jobId}: " . $e->getMessage());
+                            // We do NOT mark as failed here, we let finally() handle the summary.
+                        }
+                    })
+                    ->finally(function ($batch) use ($jobId) {
+                        $job = \App\Models\ScrapingJob::find($jobId);
+                        if ($job) {
+                            $count = $job->businesses()->count();
+                            // If we found results, it's a success even if some chunks failed
+                            if ($count > 0) {
+                                $job->markAsCompleted($count);
+                            } else if ($batch->cancelled()) {
+                                $job->markAsCancelled();
+                            } else if ($batch->failedJobs > 0) {
+                                $job->markAsFailed("Search completed with some errors but found no results.");
+                            } else {
+                                $job->markAsCompleted(0);
+                            }
+                        }
+                    })
+                    ->dispatch();
+
+                return;
+            }
         }
 
         // ============================================
@@ -87,6 +143,8 @@ class ScrapeBusinessesJob implements ShouldQueue
             if ($this->scrapingJob->isCancelled()) {
                 return;
             }
+            // Update the current location being searched
+            $this->scrapingJob->update(['current_location' => $this->location ?? $this->scrapingJob->location]);
             $this->scrapingJob->markAsRunning();
         }
 
@@ -143,12 +201,33 @@ class ScrapeBusinessesJob implements ShouldQueue
 
                 fclose($pipes[0]);
                 fclose($pipes[1]);
+                
+                // 💡 NEW: Capture stderr for debugging
+                $stderr = stream_get_contents($pipes[2]);
                 fclose($pipes[2]);
-                proc_close($process);
+
+                $exitCode = proc_close($process);
+
+                // 💡 LOGGING: Debug sub-job completion
+                if ($exitCode !== 0) {
+                    Log::error("CLI process for {$city} failed with code {$exitCode}. Stderr: {$stderr}");
+                } else {
+                    Log::info("CLI process for {$city} exited with code {$exitCode}");
+                }
 
                 if ($this->scrapingJob) {
                     $this->scrapingJob->refresh();
-                    $this->scrapingJob->markAsCompleted($this->scrapingJob->businesses()->count());
+                    
+                    // 💡 CRITICAL: Only mark as completed if it's NOT a sub-job in a batch.
+                    // For batches, the overall completion is handled by the batch ->finally() callback.
+                    if ($this->batch() === null) {
+                        $this->scrapingJob->markAsCompleted($this->scrapingJob->businesses()->count());
+                    } else {
+                        // For sub-jobs, just ensure the count is accurate periodically
+                        $this->scrapingJob->update([
+                            'results_count' => $this->scrapingJob->businesses()->count()
+                        ]);
+                    }
                 }
             }
 
@@ -160,8 +239,15 @@ class ScrapeBusinessesJob implements ShouldQueue
 
     public function failed(Throwable $exception): void
     {
-        Log::error('Job failed: '.$exception->getMessage(), ['job_id' => $this->scrapingJob?->id ?? null]);
-        if ($this->scrapingJob && ! $this->leads) {
+        Log::error('Job failed: '.$exception->getMessage(), [
+            'job_id' => $this->scrapingJob?->id ?? null,
+            'location' => $this->location ?? 'Unknown',
+            'is_batch' => $this->batch() !== null,
+        ]);
+
+        // 💡 ONLY mark as failed if it's NOT a batch sub-job.
+        // For batches, the main job failure state is handled in the Mode 0 ->finally() block.
+        if ($this->scrapingJob && ! $this->leads && ! $this->batch()) {
             $this->scrapingJob->markAsFailed($exception->getMessage());
         }
     }

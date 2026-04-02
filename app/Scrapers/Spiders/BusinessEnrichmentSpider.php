@@ -141,7 +141,7 @@ class BusinessEnrichmentSpider extends BasicSpider
                 if (preg_match($regex, $href)) {
                     SocialLink::updateOrCreate(
                         ['business_id' => $business->id, 'platform' => $platform],
-                        ['url' => $href, 'is_active' => true]
+                        ['url' => mb_substr($href, 0, 2048), 'is_active' => true]
                     );
                     break;
                 }

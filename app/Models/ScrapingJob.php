@@ -14,6 +14,7 @@ class ScrapingJob extends Model
     protected $fillable = [
         'keyword',
         'location',
+        'current_location',
         'radius',
         'source',
         'status',

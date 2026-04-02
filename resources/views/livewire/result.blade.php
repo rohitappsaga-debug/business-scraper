@@ -74,6 +74,12 @@
                                     @endif
                                     {{ ucfirst($status) }}
                                 </span>
+                                @if($status === 'running' && $job->current_location)
+                                    <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-1 animate-pulse flex items-center gap-1">
+                                        <span class="material-symbols-outlined text-[10px]">near_me</span>
+                                        Exploring: {{ $job->current_location }}
+                                    </div>
+                                @endif
                             </td>
                             <td class="px-4 py-4 text-slate-600 dark:text-slate-400 text-sm">{{ $job->results_count ?? 0 }}</td>
                             <td class="px-4 py-4 text-slate-600 dark:text-slate-400 text-sm">{{ $job->created_at?->format('M j, Y g:i A') }}</td>

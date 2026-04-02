@@ -71,7 +71,7 @@ class BusinessService
 
             $business = Business::updateOrCreate(['dedup_hash' => $hash], $updateData);
 
-            // Save emails
+            // Save emails (Always merge)
             if (! empty($data['email']) && is_array($data['email'])) {
                 foreach ($data['email'] as $email) {
                     BusinessEmail::firstOrCreate([
@@ -81,7 +81,7 @@ class BusinessService
                 }
             }
 
-            // Save social links
+            // Save social links (Always merge)
             if (! empty($data['socials']) && is_array($data['socials'])) {
                 foreach ($data['socials'] as $platform => $url) {
                     if ($url) {
@@ -93,14 +93,17 @@ class BusinessService
                 }
             }
 
+            // Update completeness score after saving emails/socials
+            $business->update(['completeness_score' => $this->calculateCompleteness(
+                $business->refresh()->load(['businessEmails', 'socialLinks'])
+            )]);
+
             $isDirectory = $website && preg_match("/(?:justdial\.com|sulekha\.com|indiamart\.com|tradeindia\.com|yellowpages\.in|yelp\.com|threebestrated\.in|urbanco\.in)/i", $website);
 
             // Optimization: Only dispatch enrichment if it's a new business or website changed
             // AND only if the source hasn't already provided enrichment data (emails/socials)
             if ($business && ! $isDirectory) {
-                $hasEnrichment = $business->businessEmails()->exists() || $business->socialLinks()->exists();
-
-                if (! $hasEnrichment || $business->wasRecentlyCreated || $business->wasChanged('website')) {
+                if ($business->completeness_score < 70 || $business->wasRecentlyCreated || $business->wasChanged('website')) {
                     EnrichBusinessJob::dispatch($business->id)->onQueue('default');
                 }
             }
@@ -111,5 +114,31 @@ class BusinessService
 
             return null;
         }
+    }
+
+    /**
+     * Calculate a completeness score (0-100) for a business.
+     */
+    public function calculateCompleteness(Business $business): int
+    {
+        $score = 0;
+        
+        // 1. Basic Info (40 points)
+        if ($business->name) $score += 10;
+        if ($business->address) $score += 10;
+        if ($business->phone) $score += 10;
+        if ($business->website) $score += 10;
+
+        // 2. Data Enrichment (40 points)
+        if ($business->businessEmails()->exists()) $score += 20;
+        if ($business->socialLinks()->exists()) $score += 20;
+
+        // 3. Metadata (20 points)
+        if ($business->category) $score += 5;
+        if ($business->rating) $score += 5;
+        if ($business->reviews_count) $score += 5;
+        if ($business->latitude && $business->longitude) $score += 5;
+
+        return $score;
     }
 }
