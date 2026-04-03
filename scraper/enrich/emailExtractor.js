@@ -1,7 +1,15 @@
 export function extractEmails(text, businessName = "", website = "") {
   if (!text) return [];
+  
+  // 🛡️ OBFUSCATION: Pre-process text to handle common obfuscated formats
+  const cleanText = text
+    .replace(/\[at\]/gi, "@")
+    .replace(/\(at\)/gi, "@")
+    .replace(/\[dot\]/gi, ".")
+    .replace(/\(dot\)/gi, ".");
+
   const regex = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
-  const matches = text.match(regex) || [];
+  const matches = cleanText.match(regex) || [];
   
   const nameSlug = businessName.toLowerCase().replace(/[^a-z0-9]/g, "");
   let domain = "";
@@ -12,35 +20,38 @@ export function extractEmails(text, businessName = "", website = "") {
   const uniqueEmails = [...new Set(matches.map(e => e.toLowerCase()))];
   
   return uniqueEmails.filter(email => {
-    // 🛡️ STABILITY: Allow common business aliases regardless of naming slug
-    const isCommonAlias = /^(info|contact|admin|support|office|hello|mail|sales|admission|principal|enquiry)@/i.test(email);
+    // 🛡️ STABILITY: Allow common business aliases
+    const isCommonAlias = /^(info|contact|admin|support|office|hello|mail|sales|admission|principal|enquiry|booking|query|help|customercare)@/i.test(email);
     const isRelatedToDomain = domain && email.includes(domain);
     const isRelatedToName = email.includes(nameSlug) || nameSlug.includes(email.split("@")[0]);
     
-    // 🛡️ STABILITY: Only filter out generic providers (gmail/yahoo) if they are totally unrelated to the business
-    const isGeneric = /@(gmail|yahoo|outlook|hotmail|mail|icloud)\./i.test(email);
+    // 🛡️ STABILITY: Filter generic providers if unrelated
+    const isGeneric = /@(gmail|yahoo|outlook|hotmail|mail|icloud|protonmail|me|live|msn)\./i.test(email);
     if (isGeneric) return isRelatedToName || isCommonAlias;
 
-    // Default to including everything else (trusted)
     return true; 
   });
 }
 
-export function extractSocials(text, businessName) {
-  if (!text) return { facebook: null, instagram: null, linkedin: null, twitter: null };
-  const nameSlug = businessName.toLowerCase().replace(/[^a-z0-9]/g, "").substring(0, 4);
-  
-  const getValidSocial = (regex) => {
-    const match = text.match(regex)?.[0] || null;
-    // 🛡️ STABILITY: Reduced name slug requirement for social handles as they are often generic
-    return match;
+export function extractSocials(text) {
+  const socials = { facebook: null, instagram: null, linkedin: null, twitter: null, youtube: null };
+  if (!text) return socials;
+
+  const patterns = {
+    facebook: /https?:\/\/(www\.)?facebook\.com\/[^\s"'<>\?\&]+/i,
+    instagram: /https?:\/\/(www\.)?instagram\.com\/[^\s"'<>\?\&]+/i,
+    linkedin: /https?:\/\/(www\.)?linkedin\.com\/(in|company)\/[^\s"'<>\?\&]+/i,
+    twitter: /https?:\/\/(www\.)?(twitter|x)\.com\/[^\s"'<>\?\&]+/i,
+    youtube: /https?:\/\/(www\.)?youtube\.com\/(c|channel|user|@)?[^\s"'<>\?\&]+/i,
   };
 
-  return {
-    facebook: getValidSocial(/https?:\/\/(www\.)?facebook\.com\/[^\s"'<]+/i),
-    instagram: getValidSocial(/https?:\/\/(www\.)?instagram\.com\/[^\s"'<]+/i),
-    linkedin: getValidSocial(/https?:\/\/(www\.)?linkedin\.com\/(in|company)\/[^\s"'<]+/i),
-    twitter: getValidSocial(/https?:\/\/(www\.)?(twitter|x)\.com\/[^\s"'<]+/i),
-  };
+  for (const [platform, pattern] of Object.entries(patterns)) {
+    const match = text.match(pattern);
+    if (match) {
+      socials[platform] = match[0];
+    }
+  }
+
+  return socials;
 }
 

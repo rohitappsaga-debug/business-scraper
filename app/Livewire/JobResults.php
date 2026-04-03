@@ -16,6 +16,9 @@ class JobResults extends Component
     public int $id = 0;
 
     public string $search = '';
+    public string $city = '';
+    public string $state = '';
+    public string $country = '';
 
     public int $currentPage = 1;
 
@@ -39,6 +42,17 @@ class JobResults extends Component
     }
 
     #[Computed]
+    public function isEnriching(): bool
+    {
+        if ($this->job?->status !== 'completed') {
+            return false;
+        }
+
+        // Check if there are any jobs in the queue for enrichment
+        return \Illuminate\Support\Facades\DB::table('jobs')->count() > 0;
+    }
+
+    #[Computed]
     public function totalResults(): int
     {
         return $this->buildQuery()->count();
@@ -48,6 +62,12 @@ class JobResults extends Component
     public function totalPages(): int
     {
         return max(1, (int) ceil($this->totalResults / $this->perPage));
+    }
+
+    #[Computed]
+    public function hasActiveFilters(): bool
+    {
+        return !empty($this->search) || !empty($this->city) || !empty($this->state) || !empty($this->country);
     }
 
     /** @return Collection<int, Business> */
@@ -65,7 +85,28 @@ class JobResults extends Component
             ->get();
     }
 
+    public function resetFilters(): void
+    {
+        $this->reset(['search', 'city', 'state', 'country']);
+        $this->currentPage = 1;
+    }
+
     public function updatedSearch(): void
+    {
+        $this->currentPage = 1;
+    }
+    
+    public function updatedCity(): void
+    {
+        $this->currentPage = 1;
+    }
+
+    public function updatedState(): void
+    {
+        $this->currentPage = 1;
+    }
+
+    public function updatedCountry(): void
     {
         $this->currentPage = 1;
     }
@@ -159,6 +200,18 @@ class JobResults extends Component
                     ->orWhere('address', 'like', $term);
             });
         }
+        
+        if (! empty($this->city)) {
+            $query->where('city', 'like', '%'.$this->city.'%');
+        }
+
+        if (! empty($this->state)) {
+            $query->where('state', 'like', '%'.$this->state.'%');
+        }
+
+        if (! empty($this->country)) {
+            $query->where('country', 'like', '%'.$this->country.'%');
+        }
 
         return $query->orderByDesc('dynamic_score')->orderByDesc('id');
     }
@@ -169,6 +222,10 @@ class JobResults extends Component
         return array_filter([
             'job_id' => $this->id,
             'search' => $this->search ?: null,
+            'city' => $this->city ?: null,
+            'state' => $this->state ?: null,
+            'country' => $this->country ?: null,
         ]);
     }
 }
+

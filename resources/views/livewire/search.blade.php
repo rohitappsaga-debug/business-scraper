@@ -49,14 +49,27 @@
                                     </div>
                                     @error('location') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                                 </div>
+
                                 <!-- Search Depth -->
                                 <div class="flex flex-col gap-2">
                                     <label class="text-sm font-semibold text-slate-700 dark:text-slate-300">Search Limit (Records)</label>
                                     <div class="relative">
                                         <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">list_alt</span>
-                                        <input wire:model="limit" class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all" min="1" step="1" type="number" required/>
+                                        <input wire:model="limit" class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed" min="1" step="1" type="number" required @if($isUnlimited) disabled @endif/>
                                     </div>
                                     @error('limit') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                                </div>
+
+                                <!-- Unlimited Option (Fills the empty right column) -->
+                                <div class="flex flex-col gap-2">
+                                    <label class="text-sm font-semibold text-transparent select-none hidden md:block" aria-hidden="true">Unlimited</label>
+                                    <label for="unlimited" class="flex items-center justify-between px-4 py-3 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors w-full">
+                                        <div class="flex items-center gap-3">
+                                            <span class="material-symbols-outlined text-primary">all_inclusive</span>
+                                            <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Scrape Maximum Data</span>
+                                        </div>
+                                        <input type="checkbox" id="unlimited" wire:model.live="isUnlimited" class="w-5 h-5 text-primary bg-white border-slate-300 rounded focus:ring-primary focus:ring-2 dark:bg-slate-900 dark:border-slate-600 shadow-sm cursor-pointer">
+                                    </label>
                                 </div>
 
                             </div>

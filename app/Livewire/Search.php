@@ -16,12 +16,14 @@ class Search extends Component
 
     public int $limit = 100;
 
+    public bool $isUnlimited = false;
+
     public function submit(): void
     {
         $this->validate([
             'keyword' => 'required|string|max:255',
             'location' => 'required|string|max:255',
-            'limit' => 'required|integer|min:1',
+            'limit' => 'exclude_if:isUnlimited,true|required|integer|min:1',
         ]);
 
         $existingJob = ScrapingJob::where('keyword', $this->keyword)
@@ -35,12 +37,14 @@ class Search extends Component
             return;
         }
 
+        $limitToSave = $this->isUnlimited ? 999999 : $this->limit;
+
         $scrapingJob = ScrapingJob::create([
             'keyword' => $this->keyword,
             'location' => $this->location,
             'radius' => 25,
             'source' => 'Hybrid_enriched_v3',
-            'limit' => $this->limit,
+            'limit' => $limitToSave,
             'status' => 'pending',
         ]);
 

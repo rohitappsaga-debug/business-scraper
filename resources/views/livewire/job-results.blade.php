@@ -91,6 +91,44 @@
         </div>
     @endif
 
+    <!-- ⚡ Deep Data Enrichment Loader (Professional & Compact) -->
+    @if ($this->isEnriching)
+        <div class="relative overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm px-5 py-4 bg-white dark:bg-slate-800 transition-all mb-4">
+            
+            <style>
+                @keyframes slideIndeterminate {
+                    0% { transform: translateX(-100%); }
+                    100% { transform: translateX(300%); }
+                }
+                .indeterminate-progress {
+                    animation: slideIndeterminate 1.5s infinite ease-in-out;
+                }
+            </style>
+
+            <div class="relative z-10 flex items-center gap-4">
+                <!-- Classic Professional Spinner -->
+                <svg class="animate-spin h-5 w-5 text-blue-600 dark:text-blue-500 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+
+                <div class="flex flex-col md:flex-row md:items-center gap-1 md:gap-3 flex-1 min-w-0">
+                    <h3 class="text-slate-900 dark:text-white text-sm font-semibold tracking-tight shrink-0">
+                        Extracting Deep Data & Social Links...
+                    </h3>
+                    <p class="text-slate-500 dark:text-slate-400 text-xs truncate">
+                        The primary search is complete. Background workers are dynamically visiting business websites right now to accurately locate their emails and social media accounts.
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Classic Indeterminate Bottom Bar -->
+            <div class="absolute" style="bottom: 0; left: 0; width: 100%; height: 2px; background-color: rgba(148, 163, 184, 0.2);">
+                <div class="indeterminate-progress" style="height: 100%; width: 33.333333%; background-color: #2563eb; border-radius: 9999px;"></div>
+            </div>
+        </div>
+    @endif
+
     <!-- ⚡ Premium Live Activity Loader -->
     @if ($this->job->status === 'running')
         <div class="relative overflow-hidden rounded-2xl bg-white dark:bg-slate-900 border border-blue-200 dark:border-blue-900/30 shadow-lg p-6 group transition-all">
@@ -138,18 +176,88 @@
         </div>
     @endif
 
+    <!-- Filters -->
+    <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 md:p-6 mb-2">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+            <!-- Global Search -->
+            <div class="flex flex-col gap-1.5 lg:col-span-2">
+                <label for="search" class="text-slate-700 dark:text-slate-300 text-xs font-bold uppercase tracking-wider">Search</label>
+                <div class="relative group">
+                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 text-[20px] group-focus-within:text-primary transition-colors">search</span>
+                    <input 
+                        type="text" 
+                        id="search" 
+                        wire:model.live.debounce.300ms="search"
+                        placeholder="Search by name, email or category..." 
+                        class="w-full h-11 pl-10 pr-4 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600"
+                    >
+                </div>
+            </div>
+
+            <!-- City Filter -->
+            <div class="flex flex-col gap-1.5">
+                <label for="city" class="text-slate-700 dark:text-slate-300 text-xs font-bold uppercase tracking-wider">City</label>
+                <div class="relative group">
+                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 text-[20px] group-focus-within:text-primary transition-colors">location_city</span>
+                    <input 
+                        type="text" 
+                        id="city" 
+                        wire:model.live.debounce.300ms="city"
+                        placeholder="e.g. New York..." 
+                        class="w-full h-11 pl-10 pr-4 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600"
+                    >
+                </div>
+            </div>
+
+            <!-- State Filter -->
+            <div class="flex flex-col gap-1.5">
+                <label for="state" class="text-slate-700 dark:text-slate-300 text-xs font-bold uppercase tracking-wider">State</label>
+                <div class="relative group">
+                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 text-[20px] group-focus-within:text-primary transition-colors">map</span>
+                    <input 
+                        type="text" 
+                        id="state" 
+                        wire:model.live.debounce.300ms="state"
+                        placeholder="e.g. NY..." 
+                        class="w-full h-11 pl-10 pr-4 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600"
+                    >
+                </div>
+            </div>
+
+            <!-- Country Filter -->
+            <div class="flex flex-col gap-1.5">
+                <label for="country" class="text-slate-700 dark:text-slate-300 text-xs font-bold uppercase tracking-wider">Country</label>
+                <div class="relative group">
+                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 text-[20px] group-focus-within:text-primary transition-colors">public</span>
+                    <input 
+                        type="text" 
+                        id="country" 
+                        wire:model.live.debounce.300ms="country"
+                        placeholder="e.g. USA..." 
+                        class="w-full h-11 pl-10 pr-4 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600"
+                    >
+                </div>
+            </div>
+
+            <!-- Reset Filters -->
+            @if($this->hasActiveFilters)
+                <div class="flex lg:col-span-5 md:col-span-2 justify-end">
+                    <button 
+                        type="button" 
+                        wire:click="resetFilters"
+                        class="flex items-center justify-center gap-2 h-11 px-6 w-full sm:w-auto rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all shadow-sm"
+                    >
+                        <span class="material-symbols-outlined text-[18px]">filter_alt_off</span>
+                        Clear Filters
+                    </button>
+                </div>
+            @endif
+        </div>
+    </div>
+
     <!-- Results Table Section -->
     <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col">
-        <div class="flex flex-col md:flex-row items-center justify-between gap-4 p-4 border-b border-slate-100 dark:border-slate-800">
-            <label class="flex flex-col min-w-40 h-10 w-full md:max-w-md">
-                <div class="flex w-full flex-1 items-stretch rounded-lg h-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus-within:ring-2 focus-within:ring-primary/20 transition-all">
-                    <div class="text-slate-500 dark:text-slate-400 flex items-center justify-center pl-3">
-                        <span class="material-symbols-outlined text-lg">search</span>
-                    </div>
-                    <input wire:model.live="search" class="form-input flex w-full min-w-0 flex-1 border-none bg-transparent focus:outline-0 focus:ring-0 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 px-3 text-sm font-normal" placeholder="Filter results by name, email or category..."/>
-                </div>
-            </label>
-
+        <div class="flex flex-col md:flex-row items-center justify-end gap-4 p-4 border-b border-slate-100 dark:border-slate-800">
             <!-- Rows Selector -->
             <div class="flex items-center gap-3 shrink-0 group/row-select">
                 <span class="text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest leading-none">Show</span>
@@ -171,22 +279,22 @@
             <table class="w-full text-left border-collapse">
                 <thead>
                     <tr class="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
-                        <th class="px-4 py-3 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider">Business Name</th>
-                        <th class="px-4 py-3 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider">Category</th>
-                        <th class="px-4 py-3 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider">Address</th>
-                        <th class="px-4 py-3 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider">Phone</th>
-                        <th class="px-4 py-3 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider">Email</th>
-                        <th class="px-4 py-3 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider text-center">Socials</th>
-                        <th class="px-4 py-3 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider text-center">Actions</th>
+                        <th class="px-4 py-3 text-slate-900 dark:text-slate-200 text-xs font-bold uppercase tracking-wider">Business Name</th>
+                        <th class="px-4 py-3 text-slate-900 dark:text-slate-200 text-xs font-bold uppercase tracking-wider">Category</th>
+                        <th class="px-4 py-3 text-slate-900 dark:text-slate-200 text-xs font-bold uppercase tracking-wider">Address</th>
+                        <th class="px-4 py-3 text-slate-900 dark:text-slate-200 text-xs font-bold uppercase tracking-wider">Phone</th>
+                        <th class="px-4 py-3 text-slate-900 dark:text-slate-200 text-xs font-bold uppercase tracking-wider">Email</th>
+                        <th class="px-4 py-3 text-slate-900 dark:text-slate-200 text-xs font-bold uppercase tracking-wider text-center">Socials</th>
+                        <th class="px-4 py-3 text-slate-900 dark:text-slate-200 text-xs font-bold uppercase tracking-wider text-center">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                     @forelse ($results as $result)
                         <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                             <td class="px-4 py-4 text-slate-900 dark:text-white font-medium text-sm">{{ $result->name }}</td>
-                            <td class="px-4 py-4 text-slate-600 dark:text-slate-400 text-sm">{{ $result->category }}</td>
-                            <td class="px-4 py-4 text-slate-600 dark:text-slate-400 text-sm">{{ $result->address }}</td>
-                            <td class="px-4 py-4 text-slate-600 dark:text-slate-400 text-sm">
+                            <td class="px-4 py-4 text-slate-900 dark:text-slate-200 font-medium text-sm">{{ $result->category }}</td>
+                            <td class="px-4 py-4 text-slate-900 dark:text-slate-200 font-medium text-sm">{{ $result->address }}</td>
+                            <td class="px-4 py-4 text-slate-900 dark:text-slate-200 font-medium text-sm">
                                 @if (!empty(trim((string) $result->phone)))
                                     {{ $result->phone }}
                                 @else
@@ -225,7 +333,7 @@
                                         @endphp
                                         @if($link)
                                             @php $socialCount++; @endphp
-                                            <a href="{{ $link->url }}" target="_blank" rel="noopener noreferrer" class="text-slate-400 hover:text-primary transition-colors" title="{{ ucfirst($platform) }}">
+                                            <a href="{{ $link->url }}" target="_blank" rel="noopener noreferrer" class="text-slate-800 dark:text-slate-300 hover:text-primary transition-colors" title="{{ ucfirst($platform) }}">
                                                 @if($platform === 'facebook')
                                                     <svg class="size-4 fill-current" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
                                                 @elseif($platform === 'instagram')

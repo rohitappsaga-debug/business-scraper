@@ -12,7 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('social_links', function (Blueprint $table) {
-            $table->text('url')->change();
+            $table->mediumText('url')->change();
+
         });
     }
 

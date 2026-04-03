@@ -128,3 +128,76 @@ export async function scrape({ keyword, city, maxResults = 100, onResult = null 
     await browser.close();
   }
 }
+
+/**
+ * 🕵️ DISCOVERY: Find a business's official website URL using high-quality search.
+ * This is used for background enrichment when initial discovery lacks a website.
+ */
+export async function discoverWebsiteUrl(name, city) {
+  const browser = await chromium.launch({ headless: true });
+  // 🇮🇳 REGION: Set locale and timezone to India to get relevant local search results
+  const context = await browser.newContext({
+    locale: "en-IN",
+    timezoneId: "Asia/Kolkata",
+    userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+  });
+  const page = await context.newPage();
+  
+  try {
+    const query = `${name} ${city} official website`;
+    // 🦆 DUCKDUCKGO: Using the HTML/Lite version for clean, bot-friendly extraction
+    const searchUrl = `https://duckduckgo.com/html/?q=${encodeURIComponent(query)}&kl=in-en`;
+    
+    logger.info(`Discovery: Searching for "${query}" via DuckDuckGo`);
+    await page.goto(searchUrl, { waitUntil: "networkidle", timeout: 25000 });
+    
+    // 📸 DEBUG: Take a screenshot to see what DDG shows
+    await page.screenshot({ path: "scraper_debug_ddg.png", fullPage: true });
+
+    // Extract first organic result link that isn't a directory
+    const website = await page.evaluate(() => {
+      // 🦆 DDG HTML results use .result__a for titles and often contain the raw URL in 'uddg' param
+      const links = Array.from(document.querySelectorAll("a.result__a"));
+      
+      const directories = [
+        "justdial.com", "sulekha.com", "indiamart.com", "tradeindia.com", 
+        "yellowpages.in", "yelp.com", "facebook.com", "instagram.com", 
+        "linkedin.com", "twitter.com", "youtube.com", "mapquest.com",
+        "wikipedia.org", "practo.com", "lybrate.com"
+      ];
+      
+      for (const link of links) {
+        let href = link.href;
+        
+        // 🕵️ Handle DDG Redirects: Extract destination URL from 'uddg' parameter
+        if (href.includes("uddg=")) {
+           try {
+             const urlParams = new URLSearchParams(href.split("?")[1]);
+             href = urlParams.get("uddg") || href;
+           } catch (e) {}
+        }
+
+        if (href && href.startsWith("http") && !href.includes("duckduckgo.com")) {
+          const lHref = href.toLowerCase();
+          if (!directories.some(d => lHref.includes(d))) {
+            return href;
+          }
+        }
+      }
+      return null;
+    });
+    
+    if (website) {
+       logger.info(`Discovery: Found "${website}" for "${name}"`);
+    } else {
+       logger.info(`Discovery: No official website found for "${name}" among top results.`);
+    }
+    
+    return website;
+  } catch (error) {
+    logger.error(`Discovery failed for "${name}": ${error.message}`);
+    return null;
+  } finally {
+    await browser.close();
+  }
+}

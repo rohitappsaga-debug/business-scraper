@@ -44,17 +44,17 @@ class BusinessService
             ];
 
             if ($address) {
-                $updateData['address'] = $address;
+                $updateData['address'] = mb_substr($address, 0, 191);
             }
             if ($website && (! $existing || ! $existing->website)) {
                 $updateData['website'] = $website;
             }
             if ($phone && (! $existing || ! $existing->phone)) {
-                $updateData['phone'] = $phone;
+                $updateData['phone'] = mb_substr($phone, 0, 191);
             }
 
             if (isset($data['category'])) {
-                $updateData['category'] = $data['category'];
+                $updateData['category'] = mb_substr($data['category'], 0, 191);
             }
             if (isset($data['rating'])) {
                 $updateData['rating'] = $data['rating'];
@@ -110,10 +110,16 @@ class BusinessService
 
             return $business;
         } catch (\Exception $e) {
-            Log::error("Failed to save business: {$name}", ['error' => $e->getMessage()]);
+            Log::error("Failed to save business: {$name}", [
+                'error' => $e->getMessage(),
+                'job_id' => $jobId,
+                'city' => $city,
+                'data_keys' => array_keys($data),
+            ]);
 
             return null;
         }
+
     }
 
     /**
@@ -122,22 +128,42 @@ class BusinessService
     public function calculateCompleteness(Business $business): int
     {
         $score = 0;
-        
+
         // 1. Basic Info (40 points)
-        if ($business->name) $score += 10;
-        if ($business->address) $score += 10;
-        if ($business->phone) $score += 10;
-        if ($business->website) $score += 10;
+        if ($business->name) {
+            $score += 10;
+        }
+        if ($business->address) {
+            $score += 10;
+        }
+        if ($business->phone) {
+            $score += 10;
+        }
+        if ($business->website) {
+            $score += 10;
+        }
 
         // 2. Data Enrichment (40 points)
-        if ($business->businessEmails()->exists()) $score += 20;
-        if ($business->socialLinks()->exists()) $score += 20;
+        if ($business->businessEmails()->exists()) {
+            $score += 20;
+        }
+        if ($business->socialLinks()->exists()) {
+            $score += 20;
+        }
 
         // 3. Metadata (20 points)
-        if ($business->category) $score += 5;
-        if ($business->rating) $score += 5;
-        if ($business->reviews_count) $score += 5;
-        if ($business->latitude && $business->longitude) $score += 5;
+        if ($business->category) {
+            $score += 5;
+        }
+        if ($business->rating) {
+            $score += 5;
+        }
+        if ($business->reviews_count) {
+            $score += 5;
+        }
+        if ($business->latitude && $business->longitude) {
+            $score += 5;
+        }
 
         return $score;
     }

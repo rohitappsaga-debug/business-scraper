@@ -8,12 +8,50 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\View\View;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 
 class Result extends Component
 {
     use WithPagination;
+
+    #[Url(as: 'q')]
+    public string $keyword = '';
+
+    #[Url(as: 'l')]
+    public string $location = '';
+
+    #[Url(as: 'c')]
+    public string $category = '';
+
+    /**
+     * Handle updating of filter properties to reset pagination.
+     */
+    public function updatedKeyword(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedLocation(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedCategory(): void
+    {
+        $this->resetPage();
+    }
+
+    /**
+     * Reset all filters.
+     */
+    public function resetFilters(): void
+    {
+        $this->reset(['keyword', 'location', 'category']);
+        $this->resetPage();
+    }
+
     public function rerunJob(int $jobId): void
     {
         $job = ScrapingJob::find($jobId);
@@ -48,8 +86,25 @@ class Result extends Component
     public function jobs(): LengthAwarePaginator
     {
         return ScrapingJob::query()
+            ->when($this->keyword, function ($query, $keyword) {
+                $query->where('keyword', 'like', "%{$keyword}%");
+            })
+            ->when($this->location, function ($query, $location) {
+                $query->where('location', 'like', "%{$location}%");
+            })
+            ->when($this->category, function ($query, $category) {
+                $query->whereHas('businesses', function ($query) use ($category) {
+                    $query->where('category', 'like', "%{$category}%");
+                });
+            })
             ->orderByDesc('created_at')
             ->paginate(10);
+    }
+
+    #[Computed]
+    public function hasActiveFilters(): bool
+    {
+        return ! empty($this->keyword) || ! empty($this->location) || ! empty($this->category);
     }
 
     public function confirmLogout(): void

@@ -151,9 +151,10 @@ class ScrapeBusinessesJob implements ShouldQueue
         try {
             $keyword = $this->keyword ?? $this->scrapingJob->keyword;
             $city = $this->location ?? $this->scrapingJob->location;
+            $limit = $this->scrapingJob->limit ?? 100;
 
             $cliPath = base_path('scraper/cli.js');
-            $command = "node \"{$cliPath}\" \"{$keyword}\" \"{$city}\"";
+            $command = "node \"{$cliPath}\" \"{$keyword}\" \"{$city}\" {$limit}";
 
             Log::info("Executing Streaming CLI: {$command}");
 
