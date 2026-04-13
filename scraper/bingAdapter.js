@@ -34,15 +34,15 @@ export async function scrapeBing({ keyword, city, maxResults = 50 }) {
     // In a production app, we would use a more robust way to handle Bing's UI
     const results = await page.evaluate((max) => {
       const bizs = [];
-      const items = document.querySelectorAll(".ent-b_cards li"); // Simplified selector
+      const items = document.querySelectorAll(".ent-b_cards li, .listing-item, div[role='listitem']");
       
       items.forEach((item, index) => {
         if (index >= max) return;
         
-        const name = item.querySelector(".ent-b_title")?.innerText || "";
-        const address = item.querySelector(".ent-b_address")?.innerText || "";
-        const phone = item.querySelector(".ent-b_phone")?.innerText || "";
-        const website = item.querySelector("a.ent-b_website")?.href || "";
+        const name = item.querySelector(".ent-b_title, .listing-title, h1, h2, h3")?.innerText || "";
+        const address = item.querySelector(".ent-b_address, .listing-address, [class*='address']")?.innerText || "";
+        const phone = item.querySelector(".ent-b_phone, .listing-phone, [class*='phone']")?.innerText || "";
+        const website = item.querySelector("a[href*='http'], a.ent-b_website")?.href || "";
         
         if (name) {
           bizs.push({

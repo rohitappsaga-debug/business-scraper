@@ -73,8 +73,18 @@ export async function scrapeGoogleMaps(keyword, city, headless = true, existingB
 
     // Keep scrolling until we have enough links or Google has no more results
     while (discoveredCount < maxResults) {
-      const links = await page.$$eval("a[href*='/maps/place/']", (els) => els.map(e => e.href));
-      discoveredCount = [...new Set(links)].length;
+      const links = await page.evaluate(() => {
+        const selectors = ["a[href*='/maps/place/']", "a.hfpxzc", "a[aria-label][href*='place']"];
+        const results = [];
+        selectors.forEach(s => {
+          document.querySelectorAll(s).forEach(el => {
+            if (el.href) results.push(el.href);
+          });
+        });
+        return [...new Set(results)];
+      });
+      
+      discoveredCount = links.length;
 
       if (discoveredCount > previousCount) {
         noNewResultsCount = 0;
@@ -105,7 +115,16 @@ export async function scrapeGoogleMaps(keyword, city, headless = true, existingB
       await page.waitForTimeout(2500);
     }
 
-    const uniqueLinks = [...new Set(await page.$$eval("a[href*='/maps/place/']", els => els.map(e => e.href)))].slice(0, maxResults);
+    const uniqueLinks = await page.evaluate(() => {
+      const selectors = ["a[href*='/maps/place/']", "a.hfpxzc", "a[aria-label][href*='place']"];
+      const results = [];
+      selectors.forEach(s => {
+        document.querySelectorAll(s).forEach(el => {
+          if (el.href) results.push(el.href);
+        });
+      });
+      return [...new Set(results)];
+    });
     
     if (uniqueLinks.length === 0) {
       await page.screenshot({ path: "scraper_debug_gmaps_empty.png" });
