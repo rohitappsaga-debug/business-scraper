@@ -29,7 +29,7 @@
                 <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
                     <div class="p-1 bg-gradient-to-r from-primary/50 to-primary/10"></div>
                     <div class="p-8">
-                        <form wire:submit="submit" class="space-y-6">
+                        <form wire:submit.prevent="submit" class="space-y-6">
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <!-- Keyword Input -->
                                 <div class="flex flex-col gap-2">

@@ -20,11 +20,22 @@ class Search extends Component
 
     public function submit(): void
     {
-        $this->validate([
-            'keyword' => 'required|string|max:255',
-            'location' => 'required|string|max:255',
-            'limit' => 'exclude_if:isUnlimited,true|required|integer|min:1',
+        \Illuminate\Support\Facades\Log::info("Search::submit() triggered", [
+            'keyword' => $this->keyword,
+            'location' => $this->location,
+            'limit' => $this->limit
         ]);
+
+        try {
+            $this->validate([
+                'keyword' => 'required|string|max:255',
+                'location' => 'required|string|max:255',
+                'limit' => 'exclude_if:isUnlimited,true|required|integer|min:1',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Illuminate\Support\Facades\Log::warning("Search validation failed", $e->errors());
+            throw $e;
+        }
 
         $existingJob = ScrapingJob::where('keyword', $this->keyword)
             ->where('location', $this->location)

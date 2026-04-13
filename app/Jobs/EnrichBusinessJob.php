@@ -73,7 +73,9 @@ class EnrichBusinessJob implements ShouldQueue
         $cliPath = base_path('scraper/cli.js');
         $url = $business->website;
         $name = $business->name;
-        $command = "node \"{$cliPath}\" \"{$url}\" \"{$name}\" --mode=enrich-url";
+        // 💡 FIX: Use absolute node path
+        $nodePath = 'C:\nvm4w\nodejs\node.exe';
+        $command = "\"{$nodePath}\" \"{$cliPath}\" \"{$url}\" \"{$name}\" --mode=enrich-url";
 
         Log::info("EnrichBusinessJob: Executing Deep Enrichment CLI: {$command}");
 
@@ -130,7 +132,9 @@ class EnrichBusinessJob implements ShouldQueue
         $city = $business->city;
 
         $cliPath = base_path('scraper/cli.js');
-        $command = "node \"{$cliPath}\" \"{$keyword}\" \"{$city}\" --mode=discover";
+        // 💡 FIX: Use absolute node path
+        $nodePath = 'C:\nvm4w\nodejs\node.exe';
+        $command = "\"{$nodePath}\" \"{$cliPath}\" \"{$keyword}\" \"{$city}\" --mode=discover";
 
         Log::info("EnrichBusinessJob: Executing Discovery CLI: {$command}");
 
