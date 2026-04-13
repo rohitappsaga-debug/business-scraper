@@ -154,7 +154,9 @@ class ScrapeBusinessesJob implements ShouldQueue
             $limit = $this->scrapingJob->limit ?? 100;
 
             $cliPath = base_path('scraper/cli.js');
-            $command = "node \"{$cliPath}\" \"{$keyword}\" \"{$city}\" {$limit}";
+            // 💡 FIX: Use absolute node path to ensure web server (Apache/WAMP) can find it
+            $nodePath = 'C:\nvm4w\nodejs\node.exe';
+            $command = "\"{$nodePath}\" \"{$cliPath}\" \"{$keyword}\" \"{$city}\" {$limit} --mode=scrape";
 
             Log::info("Executing Streaming CLI: {$command}");
 
@@ -167,6 +169,9 @@ class ScrapeBusinessesJob implements ShouldQueue
             $process = proc_open($command, $descriptorspec, $pipes);
 
             if (is_resource($process)) {
+                // Stream stderr in the background to avoid blocking but capture errors
+                $errorOutput = '';
+
                 // Read stdout line by line
                 while (! feof($pipes[1])) {
                     $line = fgets($pipes[1]);
@@ -199,21 +204,23 @@ class ScrapeBusinessesJob implements ShouldQueue
                         // We could capture final summary here if needed
                     }
                 }
+                // Capture any remaining stderr
+                $errorOutput .= stream_get_contents($pipes[2]);
 
                 fclose($pipes[0]);
                 fclose($pipes[1]);
-                
-                // 💡 NEW: Capture stderr for debugging
-                $stderr = stream_get_contents($pipes[2]);
                 fclose($pipes[2]);
 
-                $exitCode = proc_close($process);
+                $returnCode = proc_close($process);
 
-                // 💡 LOGGING: Debug sub-job completion
-                if ($exitCode !== 0) {
-                    Log::error("CLI process for {$city} failed with code {$exitCode}. Stderr: {$stderr}");
+                if ($returnCode !== 0) {
+                    Log::error("CLI process for {$city} failed with code {$returnCode}. Stderr: {$errorOutput}");
+                    // Optionally mark as failed if not in a batch
+                    if ($this->batch() === null) {
+                        $this->scrapingJob?->markAsFailed("CLI Error (Code {$returnCode}): " . $errorOutput);
+                    }
                 } else {
-                    Log::info("CLI process for {$city} exited with code {$exitCode}");
+                    Log::info("CLI process for {$city} exited successfully");
                 }
 
                 if ($this->scrapingJob) {

@@ -48,6 +48,11 @@ class Search extends Component
             'status' => 'pending',
         ]);
 
+        \Illuminate\Support\Facades\Log::info("Search component created Job #{$scrapingJob->id}", [
+            'keyword' => $this->keyword,
+            'location' => $this->location
+        ]);
+
         ScrapeBusinessesJob::dispatch($scrapingJob)->onQueue('default');
 
         $this->redirectRoute('result');
