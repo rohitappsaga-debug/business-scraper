@@ -39,12 +39,25 @@ export async function scrapeGoogleMaps(keyword, city, headless = true, existingB
       }
     }
     
+    // 🛡️ STABILITY: Handle Google Cookie Consent (Common on fresh profiles)
+    try {
+      const consentButton = page.getByRole('button', { name: /accept all|agree|consent/i });
+      if (await consentButton.isVisible({ timeout: 5000 })) {
+        logger.info("Google Maps: Accepting cookie consent...");
+        await consentButton.click();
+        await page.waitForTimeout(2000);
+      }
+    } catch (e) {
+      // Not always present, ignore if missing
+    }
+    
     // 🚀 OPTIMIZATION: More robust list detection
     try {
       await page.waitForSelector("div[role='feed'], div[role='main'], a[href*='/maps/place/']", { timeout: 15000 });
       logger.info("Google Maps: Feed found. Starting scroll...");
     } catch (e) {
-      logger.warn("No Google Maps results found or timeout.");
+      await page.screenshot({ path: "scraper_debug_gmaps.png" });
+      logger.warn("No Google Maps results found or timeout. Check 'scraper_debug_gmaps.png' to see if blocked.");
       await page.close();
       if (shouldCloseBrowser) await browser.close();
       return [];
@@ -93,6 +106,12 @@ export async function scrapeGoogleMaps(keyword, city, headless = true, existingB
     }
 
     const uniqueLinks = [...new Set(await page.$$eval("a[href*='/maps/place/']", els => els.map(e => e.href)))].slice(0, maxResults);
+    
+    if (uniqueLinks.length === 0) {
+      await page.screenshot({ path: "scraper_debug_gmaps_empty.png" });
+      logger.warn("Google Maps: Discovery finished with 0 links. See 'scraper_debug_gmaps_empty.png'");
+    }
+
     logger.info(`Discovery complete. Found ${uniqueLinks.length} unique businesses. Starting detailed extraction...`);
 
     // PHASE 2: Parallel Extraction with Worker Pool (Tabs)

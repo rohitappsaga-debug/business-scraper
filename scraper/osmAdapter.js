@@ -8,16 +8,15 @@ import { logger } from "./utils/logger.js";
 export async function scrapeOSM({ keyword, city, maxResults = 50 }) {
   const overpassUrl = "https://overpass-api.de/api/interpreter";
   
-  // 1. Geocode city to get bounds (or just use city name in query)
-  // Overpass QL to find nodes/ways with keyword in name or amenity
-  const query = `
     [out:json][timeout:25];
-    {{geocodeArea:${city}}}->.searchArea;
+    area["name"="${city}"]["admin_level"~"4|6|8"]->.searchArea;
     (
       node["name"~"${keyword}",i](area.searchArea);
       way["name"~"${keyword}",i](area.searchArea);
       node["amenity"~"${keyword}",i](area.searchArea);
       way["amenity"~"${keyword}",i](area.searchArea);
+      node["shop"~"${keyword}",i](area.searchArea);
+      way["shop"~"${keyword}",i](area.searchArea);
     );
     out body;
     >;

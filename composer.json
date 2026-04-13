@@ -48,6 +48,7 @@
             "@php artisan key:generate",
             "@php artisan migrate --force",
             "npm install",
+            "npx playwright install chromium",
             "npm run build"
         ],
         "dev": [

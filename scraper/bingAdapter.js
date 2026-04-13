@@ -16,9 +16,19 @@ export async function scrapeBing({ keyword, city, maxResults = 50 }) {
   try {
     await page.goto(searchUrl, { waitUntil: "networkidle", timeout: 45000 });
     
-    // Wait for result list items
-    const resultSelector = ".ent-b_cards"; // Update this with real selector from Bing Maps
-    // For now, use a common selector analysis or generic search approach
+    // 🛡️ STABILITY: Handle Bing Cookie Consent
+    try {
+      const consentButton = page.getByRole('button', { name: /accept|agree|allow/i });
+      if (await consentButton.isVisible({ timeout: 5000 })) {
+        logger.info("Bing Scraper: Accepting cookie consent...");
+        await consentButton.click();
+        await page.waitForTimeout(2000);
+      }
+    } catch (e) {}
+
+    // 🚀 OPTIMIZATION: Updated selectors for Bing Maps
+    const resultSelector = ".ent-b_cards, .listing-item, .b_ans"; 
+    await page.waitForSelector(resultSelector, { timeout: 10000 }).catch(() => {});
     
     // This is a placeholder for real Bing Maps scraping logic using Playwright
     // In a production app, we would use a more robust way to handle Bing's UI

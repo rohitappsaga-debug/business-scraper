@@ -17,7 +17,10 @@ async function test() {
 
   if (result.success) {
     logger.info(`Found ${result.data.length} results.`);
-    console.table(result.data.slice(0, 5));
+    if (result.data.length === 0) {
+      logger.warn("Check 'scraper_debug_gmaps.png' or 'scraper_debug_gmaps_empty.png' to see why 0 results were found.");
+    }
+    console.table(result.data.slice(0, 10));
   } else {
     logger.error(`Playwright failed: ${result.error}`);
   }
