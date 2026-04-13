@@ -8,6 +8,7 @@ import { logger } from "./utils/logger.js";
 export async function scrapeOSM({ keyword, city, maxResults = 50 }) {
   const overpassUrl = "https://overpass-api.de/api/interpreter";
   
+  const query = `
     [out:json][timeout:25];
     area["name"="${city}"]["admin_level"~"4|6|8"]->.searchArea;
     (
