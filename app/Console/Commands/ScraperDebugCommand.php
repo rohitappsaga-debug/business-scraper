@@ -117,5 +117,10 @@ class ScraperDebugCommand extends Command
         $this->line($output);
         $this->info("\nDiagnostic report saved to: " . $reportPath);
         $this->comment("Please copy the result above or the contents of the file and send it back to me.");
+
+        if ($this->laravel->runningInConsole()) {
+            $this->newLine();
+            $this->ask('Press [Enter] to close this window');
+        }
     }
 }

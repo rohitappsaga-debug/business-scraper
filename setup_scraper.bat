@@ -32,7 +32,12 @@ if defined DETECTED_NODE (
     set "SAFE_NODE=!DETECTED_NODE:\=/!"
     echo Found Node at: !DETECTED_NODE!
     echo Updating .env with discovered path...
-    powershell -Command "(gc .env) -replace '^NODE_BINARY_PATH=.*', 'NODE_BINARY_PATH=\"!SAFE_NODE!\"' | Out-File -encoding utf8 .env"
+    :: Robust PowerShell update using variable passing to avoid quote hell
+    powershell -Command "$p = '!SAFE_NODE!'; (Get-Content .env) -replace '^NODE_BINARY_PATH=.*', \"NODE_BINARY_PATH=\\\"$p\\\"\" | Set-Content .env"
+    if !ERRORLEVEL! neq 0 (
+        echo [ERROR] Could not update .env file. Please check file permissions.
+        pause
+    )
 ) else (
     echo [WARNING] Could not locate node.exe automatically. 
     echo Please set NODE_BINARY_PATH manually in your .env file.
