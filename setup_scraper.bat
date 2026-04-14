@@ -120,4 +120,7 @@ echo 1. Ensure WAMP/MySQL is running.
 echo 2. Run 'php artisan serve' to start the web server.
 echo 3. Run 'php artisan queue:work' to process scraping jobs.
 echo ====================================================
+echo.
+echo [DONE] Setup finished. You can now scroll up and copy any output.
 pause
+exit /b 0
