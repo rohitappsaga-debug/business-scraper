@@ -94,8 +94,14 @@ class BusinessService
             }
 
             // Update completeness score after saving emails/socials
+            // 🚀 OPTIMIZATION: Use the data we just saved instead of refresh() + load()
+            $hasEmails = ! empty($data['email']) || $business->businessEmails()->exists();
+            $hasSocials = ! empty($data['socials']) || $business->socialLinks()->exists();
+            
             $business->update(['completeness_score' => $this->calculateCompleteness(
-                $business->refresh()->load(['businessEmails', 'socialLinks'])
+                $business,
+                $hasEmails,
+                $hasSocials
             )]);
 
             $isDirectory = $website && preg_match("/(?:justdial\.com|sulekha\.com|indiamart\.com|tradeindia\.com|yellowpages\.in|yelp\.com|threebestrated\.in|urbanco\.in)/i", $website);
@@ -125,7 +131,7 @@ class BusinessService
     /**
      * Calculate a completeness score (0-100) for a business.
      */
-    public function calculateCompleteness(Business $business): int
+    public function calculateCompleteness(Business $business, bool $hasEmails = false, bool $hasSocials = false): int
     {
         $score = 0;
 
@@ -144,10 +150,10 @@ class BusinessService
         }
 
         // 2. Data Enrichment (40 points)
-        if ($business->businessEmails()->exists()) {
+        if ($hasEmails) {
             $score += 20;
         }
-        if ($business->socialLinks()->exists()) {
+        if ($hasSocials) {
             $score += 20;
         }
 

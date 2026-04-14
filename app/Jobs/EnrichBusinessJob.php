@@ -73,8 +73,8 @@ class EnrichBusinessJob implements ShouldQueue
         $cliPath = base_path('scraper/cli.js');
         $url = $business->website;
         $name = $business->name;
-        // 💡 FIX: Use absolute node path
-        $nodePath = 'C:\nvm4w\nodejs\node.exe';
+        // 💡 REFACTORED: Use configurable node path
+        $nodePath = config('scraper.node_path');
         $command = "\"{$nodePath}\" \"{$cliPath}\" \"{$url}\" \"{$name}\" --mode=enrich-url";
 
         Log::info("EnrichBusinessJob: Executing Deep Enrichment CLI: {$command}");
@@ -88,6 +88,7 @@ class EnrichBusinessJob implements ShouldQueue
         $process = proc_open($command, $descriptorspec, $pipes);
 
         if (is_resource($process)) {
+            stream_set_blocking($pipes[2], false); // 🛡️ STABILITY: Non-blocking stderr
             $output = stream_get_contents($pipes[1]);
             $stderr = stream_get_contents($pipes[2]);
             fclose($pipes[1]);
@@ -132,8 +133,8 @@ class EnrichBusinessJob implements ShouldQueue
         $city = $business->city;
 
         $cliPath = base_path('scraper/cli.js');
-        // 💡 FIX: Use absolute node path
-        $nodePath = 'C:\nvm4w\nodejs\node.exe';
+        // 💡 REFACTORED: Use configurable node path
+        $nodePath = config('scraper.node_path', 'C:\nvm4w\nodejs\node.exe');
         $command = "\"{$nodePath}\" \"{$cliPath}\" \"{$keyword}\" \"{$city}\" --mode=discover";
 
         Log::info("EnrichBusinessJob: Executing Discovery CLI: {$command}");
@@ -148,12 +149,13 @@ class EnrichBusinessJob implements ShouldQueue
             $process = proc_open($command, $descriptorspec, $pipes);
 
             if (is_resource($process)) {
+                stream_set_blocking($pipes[2], false); // 🛡️ STABILITY: Non-blocking stderr
                 $output = stream_get_contents($pipes[1]);
                 $stderr = stream_get_contents($pipes[2]);
                 fclose($pipes[1]);
                 fclose($pipes[2]);
                 proc_close($process);
-
+                        
                 if (str_contains($output, '_DISCOVERY_RESULT_:')) {
                     $json = explode('_DISCOVERY_RESULT_:', $output)[1];
                     $data = json_decode(trim($json), true);

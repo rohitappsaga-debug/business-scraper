@@ -3,44 +3,32 @@
 return [
     /*
     |--------------------------------------------------------------------------
-    | User Agent Rotation
+    | Node Binary Path
     |--------------------------------------------------------------------------
+    |
+    | This is the absolute path to the node executable on the system.
+    |
+    | Default: C:\nvm4w\nodejs\node.exe
     */
-    'user_agents' => [
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) Gecko/20100101 Firefox/122.0',
-        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_2_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15',
-    ],
+    'node_path' => env('NODE_BINARY_PATH', 'node'),
 
     /*
     |--------------------------------------------------------------------------
-    | Request Delay (milliseconds)
+    | Scraper Concurrency
     |--------------------------------------------------------------------------
+    |
+    | The number of concurrent processes or streams the scraper should allow.
+    |
     */
-    'delay_min_ms' => (int) env('SCRAPER_DELAY_MIN_MS', 1500),
-    'delay_max_ms' => (int) env('SCRAPER_DELAY_MAX_MS', 3500),
+    'concurrency' => (int) env('SCRAPER_CONCURRENCY', 5),
 
     /*
     |--------------------------------------------------------------------------
-    | Crawler Limits
+    | Default Limit
     |--------------------------------------------------------------------------
+    |
+    | Default number of results to fetch if not specified.
+    |
     */
-    'max_depth' => (int) env('SCRAPER_MAX_DEPTH', 2),
-    'max_pages' => (int) env('SCRAPER_MAX_PAGES', 50),
-
-    /*
-    |--------------------------------------------------------------------------
-    | Proxy (optional — leave empty to disable)
-    |--------------------------------------------------------------------------
-    */
-    'proxy' => env('SCRAPER_PROXY', ''),
-
-    /*
-    |--------------------------------------------------------------------------
-    | Retry
-    |--------------------------------------------------------------------------
-    */
-    'max_retries' => (int) env('SCRAPER_MAX_RETRIES', 3),
+    'default_limit' => 100,
 ];

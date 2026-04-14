@@ -92,7 +92,16 @@ export async function scrapeWithPlaywright({
   } catch (error) {
     logger.error("Playwright CRITICAL fail:", error.message);
     if (browser) await browser.close();
-    // NEVER crash the entire process. Return a safe empty success.
-    return { success: true, data: [], error: `Playwright error: ${error.message}` };
+    
+    // 🛡️ STABILITY: Distinguish between "No Results" and "System Failure"
+    const isEnvError = error.message.includes("Executable doesn't exist") || 
+                       error.message.includes("not installed") ||
+                       error.message.includes("spawn");
+
+    return { 
+      success: !isEnvError, 
+      data: [], 
+      error: `[PLAYWRIGHT_CRITICAL]: ${error.message}` 
+    };
   }
 }

@@ -26,6 +26,14 @@ async function main() {
       process.stdout.write("_ENRICH_RESULT_:" + JSON.stringify(result) + "\n");
       process.exit(0);
     }
+    
+    if (mode === "doctor") {
+      // 🩺 DOCTOR: Diagnostic check for environment
+      const { checkEnvironment } = await import("./scraperOrchestrator.js");
+      const status = await checkEnvironment();
+      process.stdout.write("\n_JSON_START_\n" + JSON.stringify({ success: true, mode: "doctor", status }) + "\n_JSON_END_\n");
+      process.exit(status.playwright ? 0 : 1);
+    }
 
     const maxResults = process.argv[4] ? parseInt(process.argv[4]) : undefined;
     

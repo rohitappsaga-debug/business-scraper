@@ -130,6 +130,32 @@ export async function scrape({ keyword, city, maxResults = 100, onResult = null 
 }
 
 /**
+ * 🩺 DOCTOR: Check if the environment is ready for scraping.
+ * Verifies Node version and Playwright browser installation.
+ */
+export async function checkEnvironment() {
+  const status = {
+    nodeVersion: process.version,
+    playwright: false,
+    errors: []
+  };
+
+  try {
+    const browser = await chromium.launch({ headless: true });
+    await browser.close();
+    status.playwright = true;
+  } catch (err) {
+    status.playwright = false;
+    status.errors.push(`Playwright Error: ${err.message}`);
+    if (err.message.includes("Executable doesn't exist")) {
+      status.errors.push("ACTION REQUIRED: Run 'npx playwright install chromium'");
+    }
+  }
+
+  return status;
+}
+
+/**
  * 🕵️ DISCOVERY: Find a business's official website URL using high-quality search.
  * This is used for background enrichment when initial discovery lacks a website.
  */

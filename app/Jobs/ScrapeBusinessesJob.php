@@ -154,8 +154,8 @@ class ScrapeBusinessesJob implements ShouldQueue
             $limit = $this->scrapingJob->limit ?? 100;
 
             $cliPath = base_path('scraper/cli.js');
-            // 💡 FIX: Use absolute node path to ensure web server (Apache/WAMP) can find it
-            $nodePath = 'C:\nvm4w\nodejs\node.exe';
+            // 💡 REFACTORED: Use configurable node path
+            $nodePath = config('scraper.node_path');
             $command = "\"{$nodePath}\" \"{$cliPath}\" \"{$keyword}\" \"{$city}\" {$limit} --mode=scrape";
 
             Log::info("Executing Streaming CLI: {$command}");
@@ -169,12 +169,19 @@ class ScrapeBusinessesJob implements ShouldQueue
             $process = proc_open($command, $descriptorspec, $pipes);
 
             if (is_resource($process)) {
-                // Stream stderr in the background to avoid blocking but capture errors
                 $errorOutput = '';
+                stream_set_blocking($pipes[2], false); // 🛡️ STABILITY: Non-blocking stderr to avoid deadlocks
 
                 // Read stdout line by line
                 while (! feof($pipes[1])) {
                     $line = fgets($pipes[1]);
+                    
+                    // Periodically drain stderr during execution
+                    $err = stream_get_contents($pipes[2]);
+                    if ($err) {
+                        $errorOutput .= $err;
+                    }
+
                     if (! $line) {
                         continue;
                     }
