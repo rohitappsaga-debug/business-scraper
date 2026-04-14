@@ -30,10 +30,11 @@ if exist "%ProgramFiles%\nodejs\node.exe" set "DETECTED_NODE=%ProgramFiles%\node
 :node_found
 if defined DETECTED_NODE (
     set "SAFE_NODE=!DETECTED_NODE:\=/!"
+    set "NODE_TO_SAVE=!SAFE_NODE!"
     echo Found Node at: !DETECTED_NODE!
     echo Updating .env with discovered path...
-    :: Robust PowerShell update using variable passing to avoid quote hell
-    powershell -Command "$p = '!SAFE_NODE!'; (Get-Content .env) -replace '^NODE_BINARY_PATH=.*', \"NODE_BINARY_PATH=\\\"$p\\\"\" | Set-Content .env"
+    :: Using environment variable passing to avoid PowerShell quote issues
+    powershell -Command "$p = $env:NODE_TO_SAVE; (Get-Content .env) -replace 'NODE_BINARY_PATH=.*', \"NODE_BINARY_PATH=`\"$p`\"\" | Set-Content .env"
     if !ERRORLEVEL! neq 0 (
         echo [ERROR] Could not update .env file. Please check file permissions.
         pause
