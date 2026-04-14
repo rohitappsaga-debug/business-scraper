@@ -12,9 +12,30 @@ echo.
 if not exist .env (
     echo [1/9] Creating .env file from example...
     copy .env.example .env
-    echo PLEASE: Edit your .env file to set your DB credentials after this script!
 ) else (
-    echo [1/9] .env file already exists. Skipping.
+    echo [1/9] .env file already exists.
+)
+
+:: 1.5 Node.js Auto-Discovery (New)
+echo.
+echo [1.5/9] Locating Node.js binary...
+set "DETECTED_NODE="
+for /f "delims=" %%i in ('where node 2^>nul') do (
+    set "DETECTED_NODE=%%i"
+    goto :node_found
+)
+if exist "C:\Program Files\nodejs\node.exe" set "DETECTED_NODE=C:\Program Files\nodejs\node.exe" & goto :node_found
+if exist "%ProgramFiles%\nodejs\node.exe" set "DETECTED_NODE=%ProgramFiles%\nodejs\node.exe" & goto :node_found
+
+:node_found
+if defined DETECTED_NODE (
+    set "SAFE_NODE=!DETECTED_NODE:\=/!"
+    echo Found Node at: !DETECTED_NODE!
+    echo Updating .env with discovered path...
+    powershell -Command "(gc .env) -replace '^NODE_BINARY_PATH=.*', 'NODE_BINARY_PATH=\"!SAFE_NODE!\"' | Out-File -encoding utf8 .env"
+) else (
+    echo [WARNING] Could not locate node.exe automatically. 
+    echo Please set NODE_BINARY_PATH manually in your .env file.
 )
 
 :: 2. Composer Dependencies
