@@ -6,11 +6,12 @@ return [
     | Node Binary Path
     |--------------------------------------------------------------------------
     |
-    | This is the absolute path to the node executable on the system.
+    | This is the path to the node executable. By default, it will attempt
+    | to automatically discover Node.js on your system (Windows/Linux).
+    | You can override this by setting NODE_BINARY_PATH in your .env.
     |
-    | Default: C:\nvm4w\nodejs\node.exe
     */
-    'node_path' => env('NODE_BINARY_PATH', 'node'),
+    'node_path' => env('NODE_BINARY_PATH') ?: \App\Support\NodeFinder::getPath(),
 
     /*
     |--------------------------------------------------------------------------

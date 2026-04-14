@@ -16,32 +16,17 @@ if not exist .env (
     echo [1/9] .env file already exists.
 )
 
-:: 1.5 Node.js Auto-Discovery (New)
+:: 1.5 Node.js Validation
 echo.
-echo [1.5/9] Locating Node.js binary...
-set "DETECTED_NODE="
-for /f "delims=" %%i in ('where node 2^>nul') do (
-    set "DETECTED_NODE=%%i"
-    goto :node_found
-)
-if exist "C:\Program Files\nodejs\node.exe" set "DETECTED_NODE=C:\Program Files\nodejs\node.exe" & goto :node_found
-if exist "%ProgramFiles%\nodejs\node.exe" set "DETECTED_NODE=%ProgramFiles%\nodejs\node.exe" & goto :node_found
-
-:node_found
-if defined DETECTED_NODE (
-    set "SAFE_NODE=!DETECTED_NODE:\=/!"
-    set "NODE_TO_SAVE=!SAFE_NODE!"
-    echo Found Node at: !DETECTED_NODE!
-    echo Updating .env with discovered path...
-    :: Using environment variable passing to avoid PowerShell quote issues
-    powershell -Command "$p = $env:NODE_TO_SAVE; (Get-Content .env) -replace 'NODE_BINARY_PATH=.*', \"NODE_BINARY_PATH=`\"$p`\"\" | Set-Content .env"
-    if !ERRORLEVEL! neq 0 (
-        echo [ERROR] Could not update .env file. Please check file permissions.
-        pause
-    )
+echo [1.5/9] Validating Node.js runtime...
+:: The application now handles Node.js discovery automatically.
+:: We just verify that at least one Node version is accessible.
+where node >nul 2>nul
+if %ERRORLEVEL% neq 0 (
+    echo [WARNING] 'node' command not found in global PATH.
+    echo The application will attempt to find Node.js in common installation folders.
 ) else (
-    echo [WARNING] Could not locate node.exe automatically. 
-    echo Please set NODE_BINARY_PATH manually in your .env file.
+    echo [PASS] Node.js found in global PATH.
 )
 
 :: 2. Composer Dependencies

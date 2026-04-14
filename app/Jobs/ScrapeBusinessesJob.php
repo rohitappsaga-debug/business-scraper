@@ -154,8 +154,18 @@ class ScrapeBusinessesJob implements ShouldQueue
             $limit = $this->scrapingJob->limit ?? 100;
 
             $cliPath = base_path('scraper/cli.js');
-            // 💡 REFACTORED: Use configurable node path
             $nodePath = config('scraper.node_path');
+
+            // 🛡️ PERMANENT FIX: Validate Node before execution
+            if (! \App\Support\NodeFinder::isValid($nodePath)) {
+                $error = "Node.js executable not found or access denied at: {$nodePath}. Please ensure Node is installed.";
+                Log::error($error);
+                if ($this->scrapingJob) {
+                    $this->scrapingJob->markAsFailed($error);
+                }
+                return;
+            }
+
             $command = "\"{$nodePath}\" \"{$cliPath}\" \"{$keyword}\" \"{$city}\" {$limit} --mode=scrape";
 
             Log::info("Executing Streaming CLI: {$command}");

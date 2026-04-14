@@ -71,18 +71,22 @@ class EnrichBusinessJob implements ShouldQueue
     private function enrichViaBrowser(Business $business): void
     {
         $cliPath = base_path('scraper/cli.js');
-        $url = $business->website;
-        $name = $business->name;
-        // 💡 REFACTORED: Use configurable node path
         $nodePath = config('scraper.node_path');
-        $command = "\"{$nodePath}\" \"{$cliPath}\" \"{$url}\" \"{$name}\" --mode=enrich-url";
+
+        // 🛡️ PERMANENT FIX: Validate Node before execution
+        if (! \App\Support\NodeFinder::isValid($nodePath)) {
+            Log::error("Node.js executable not found or access denied at: {$nodePath}. Skipping browser enrichment.");
+            return;
+        }
+
+        $command = "\"{$nodePath}\" \"{$cliPath}\" \"{$business->website}\" \"{$business->name}\" --mode=enrich-url";
 
         Log::info("EnrichBusinessJob: Executing Deep Enrichment CLI: {$command}");
 
         $descriptorspec = [
-            0 => ['pipe', 'r'],
-            1 => ['pipe', 'w'],
-            2 => ['pipe', 'w'],
+            0 => ['pipe', 'r'], // stdin
+            1 => ['pipe', 'w'], // stdout
+            2 => ['pipe', 'w'], // stderr
         ];
 
         $process = proc_open($command, $descriptorspec, $pipes);
@@ -133,8 +137,14 @@ class EnrichBusinessJob implements ShouldQueue
         $city = $business->city;
 
         $cliPath = base_path('scraper/cli.js');
-        // 💡 REFACTORED: Use configurable node path
-        $nodePath = config('scraper.node_path', 'C:\nvm4w\nodejs\node.exe');
+        $nodePath = config('scraper.node_path');
+
+        // 🛡️ PERMANENT FIX: Validate Node before execution
+        if (! \App\Support\NodeFinder::isValid($nodePath)) {
+            Log::error("Node.js executable not found or access denied at: {$nodePath}. Skipping website discovery.");
+            return;
+        }
+
         $command = "\"{$nodePath}\" \"{$cliPath}\" \"{$keyword}\" \"{$city}\" --mode=discover";
 
         Log::info("EnrichBusinessJob: Executing Discovery CLI: {$command}");

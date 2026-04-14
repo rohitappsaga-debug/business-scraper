@@ -27,10 +27,24 @@ class CheckScraperHealth extends Command
     {
         $this->info('--- Scraper Health Check ---');
 
-        $nodePath = config('scraper.node_path', 'node');
+        $nodePath = config('scraper.node_path');
         $cliPath = base_path('scraper/cli.js');
 
-        $this->comment("Using Node: {$nodePath}");
+        $this->info("Node Runtime Discovery:");
+        if (env('NODE_BINARY_PATH')) {
+            $this->line("  - [CONFIG] Override detected in .env: " . env('NODE_BINARY_PATH'));
+        } else {
+            $this->line("  - [AUTO] Using automatically discovered path: {$nodePath}");
+        }
+
+        if (! \App\Support\NodeFinder::isValid($nodePath)) {
+            $this->error("  - [FAIL] Node executable is NOT valid or access is denied at: {$nodePath}");
+            $this->error("           Please verify your Node.js installation.");
+            return;
+        } else {
+            $this->info("  - [PASS] Node executable verified.");
+        }
+
         $this->comment("Using CLI: {$cliPath}");
 
         if (! file_exists($cliPath)) {

@@ -35,16 +35,24 @@ class ScraperDebugCommand extends Command
 
         // 1. Environment Check
         $output .= "--- 1. ENVIRONMENT ---\n";
-        $output .= "OS: " . PHP_OS . "\n";
+        $output .= "OS: " . PHP_OS_FAMILY . " (" . PHP_OS . ")\n";
         $output .= "PHP Version: " . PHP_VERSION . "\n";
-        $output .= "Scraper Config (node_path): " . config('scraper.node_path') . "\n";
+        
+        if (env('NODE_BINARY_PATH')) {
+             $output .= "Scraper Config Override (.env): " . env('NODE_BINARY_PATH') . "\n";
+        }
+        
+        $nodePath = config('scraper.node_path');
+        $output .= "Resolved Node Path: " . $nodePath . "\n";
+        
+        $isValid = \App\Support\NodeFinder::isValid($nodePath);
+        $output .= "Node Path Valid: " . ($isValid ? "YES" : "NO (Access Denied or Not Found)") . "\n";
         
         $nodeCheck = @shell_exec('node -v 2>&1');
-        $output .= "Global Node Check: " . trim($nodeCheck ?: 'Command not found') . "\n";
+        $output .= "Global Node Check (PATH): " . trim($nodeCheck ?: 'Command not found') . "\n";
         
-        $configuredNode = config('scraper.node_path');
-        $versionCheck = @shell_exec("\"{$configuredNode}\" -v 2>&1");
-        $output .= "Configured Node Check: " . trim($versionCheck ?: 'Binary not found at path') . "\n\n";
+        $versionCheck = @shell_exec("\"{$nodePath}\" -v 2>&1");
+        $output .= "Resolved Node Version: " . trim($versionCheck ?: 'N/A') . "\n\n";
 
         // 2. Database & Jobs
         $output .= "--- 2. DATABASE & JOBS ---\n";
