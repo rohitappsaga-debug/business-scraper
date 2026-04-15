@@ -27,6 +27,12 @@
         </div>
     @endif
 
+    @if (session('delete_error'))
+        <div class="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 px-4 py-3 text-red-800 dark:text-red-300 text-sm">
+            <span class="font-semibold">Error:</span> {{ session('delete_error') }}
+        </div>
+    @endif
+
     <!-- Filters -->
     <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 md:p-6">
         <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 items-end">
@@ -173,6 +179,20 @@
                                         <span class="material-symbols-outlined text-[18px] animate-spin" wire:loading wire:target="rerunJob">sync</span>
                                         <span>Rerun</span>
                                     </button>
+                                    @if ($status !== 'running')
+                                        <button type="button" @click="window.dispatchEvent(new CustomEvent('open-confirm-modal', {
+                                            detail: {
+                                                title: 'Delete Job #{{ $job->id }}',
+                                                message: 'Are you sure you want to permanently delete this job and all its scraped data? This action cannot be undone.',
+                                                confirmButton: 'Delete Permanently',
+                                                type: 'danger',
+                                                confirmAction: { name: 'delete-job', data: { jobId: {{ $job->id }} } }
+                                            }
+                                        }))" wire:loading.attr="disabled" class="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm font-semibold hover:bg-red-100 dark:hover:bg-red-900/40 transition-all" title="Delete job permanently">
+                                            <span class="material-symbols-outlined text-[18px] pointer-events-none">delete_forever</span>
+                                            <span class="pointer-events-none">Delete</span>
+                                        </button>
+                                    @endif
                                 </div>
                             </td>
                         </tr>

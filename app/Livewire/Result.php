@@ -82,6 +82,38 @@ class Result extends Component
         session()->flash('message', 'Job #'.$job->id.' has been cancelled.');
     }
 
+    #[On('delete-job')]
+    public function deleteJob(int $jobId): void
+    {
+        $job = ScrapingJob::find($jobId);
+
+        if (! $job) {
+            session()->flash('message', 'Job not found.');
+
+            return;
+        }
+
+        if ($job->status === 'running') {
+            session()->flash('delete_error', 'Job #'.$job->id.' is currently running. Cancel it first before deleting.');
+
+            return;
+        }
+
+        $jobNumber = $job->id;
+
+        // Hard delete: cascade through all child relationships
+        foreach ($job->businesses as $business) {
+            $business->businessEmails()->delete();
+            $business->socialLinks()->delete();
+            $business->collaborationEmailDraft()->delete();
+            $business->delete();
+        }
+
+        $job->delete();
+
+        session()->flash('message', 'Job #'.$jobNumber.' and all its data have been permanently deleted.');
+    }
+
     #[Computed]
     public function jobs(): LengthAwarePaginator
     {
