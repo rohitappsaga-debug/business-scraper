@@ -26,9 +26,13 @@ class AppServiceProvider extends ServiceProvider
 
         if (app()->environment('local')) {
             URL::forceRootUrl(config('app.url'));
+        }
 
+        $caBundle = config('scraper.ssl_ca_bundle');
+
+        if ($caBundle && file_exists($caBundle)) {
             Http::globalOptions([
-                'verify' => 'D:/wamp64/bin/php/php8.5.0/cacert.pem',
+                'verify' => $caBundle,
             ]);
         }
     }
